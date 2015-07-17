@@ -217,7 +217,7 @@ private[spark] class Executor(
         taskStartCpu = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
           threadMXBean.getCurrentThreadCpuTime
         } else 0L
-        val value = try {
+        val (value, accumUpdates) = try {
           task.run(taskAttemptId = taskId, attemptNumber = attemptNumber)
         } finally {
           // Note: this memory freeing logic is duplicated in DAGScheduler.runLocallyWithinThread;
@@ -262,7 +262,6 @@ private[spark] class Executor(
           m.setResultSerializationTime(afterSerialization - beforeSerialization)
         }
 
-        val accumUpdates = Accumulators.values
         val directResult = new DirectTaskResult(valueBytes, accumUpdates, task.metrics.orNull)
         val serializedDirectResult = ser.serialize(directResult)
         val resultSize = serializedDirectResult.limit
@@ -329,8 +328,6 @@ private[spark] class Executor(
         env.shuffleMemoryManager.releaseMemoryForThisThread()
         // Release memory used by this thread for unrolling blocks
         env.blockManager.memoryStore.releaseUnrollMemoryForThisThread()
-        // Release memory used by this thread for accumulators
-        Accumulators.clear()
         runningTasks.remove(taskId)
       }
     }
@@ -439,6 +436,7 @@ private[spark] class Executor(
           metrics.updateShuffleReadMetrics()
           metrics.updateInputMetrics()
           metrics.setJvmGCTime(curGCTime - taskRunner.startGCTime)
+          metrics.updateAccumulators()
 
           if (isLocal) {
             // JobProgressListener will hold an reference of it during

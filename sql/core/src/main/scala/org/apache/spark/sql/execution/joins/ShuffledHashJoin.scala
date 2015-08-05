@@ -40,6 +40,8 @@ case class ShuffledHashJoin(
 
   override def outputPartitioning: Partitioning = left.outputPartitioning
 
+  override protected[sql] val trackNumOfRowsEnabled = true
+
   override def requiredChildDistribution: Seq[ClusteredDistribution] =
     ClusteredDistribution(leftKeys) :: ClusteredDistribution(rightKeys) :: Nil
 

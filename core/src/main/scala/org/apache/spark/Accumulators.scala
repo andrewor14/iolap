@@ -152,8 +152,15 @@ class Accumulable[R, T] private[spark] (
     in.defaultReadObject()
     value_ = zero
     deserialized = true
+    // Automatically register the accumulator when it is deserialized with the task closure.
+    //
+    // Note internal accumulators sent with task are deserialized before the TaskContext is created
+    // and are registered in the TaskContext constructor. Other internal accumulators, such SQL
+    // metrics, still need to register here.
     val taskContext = TaskContext.get()
-    taskContext.registerAccumulator(this)
+    if (taskContext != null) {
+      taskContext.registerAccumulator(this)
+    }
   }
 
   override def toString: String = if (value_ == null) "null" else value_.toString
@@ -248,8 +255,16 @@ GrowableAccumulableParam[R <% Growable[T] with TraversableOnce[T] with Serializa
  * @param param helper object defining how to add elements of type `T`
  * @tparam T result type
  */
-class Accumulator[T](@transient initialValue: T, param: AccumulatorParam[T], name: Option[String])
-  extends Accumulable[T, T](initialValue, param, name) {
+class Accumulator[T] private[spark] (
+    @transient private[spark] val initialValue: T,
+    private[spark] val param: AccumulatorParam[T],
+    name: Option[String],
+    internal: Boolean)
+  extends Accumulable[T, T](initialValue, param, name, internal) {
+
+  def this(initialValue: T, param: AccumulatorParam[T], name: Option[String]) = {
+    this(initialValue, param, name, false)
+  }
 
   def this(initialValue: T, param: AccumulatorParam[T]) = this(initialValue, param, None)
 }

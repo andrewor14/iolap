@@ -20,7 +20,6 @@ package org.apache.spark.sql
 import java.io.CharArrayWriter
 import java.util.Properties
 
-import scala.collection.JavaConversions._
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe.TypeTag
@@ -33,14 +32,14 @@ import org.apache.spark.annotation.{DeveloperApi, Experimental}
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.api.python.SerDeUtil
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.analysis.{MultiAlias, ResolvedStar, UnresolvedAttribute, UnresolvedRelation}
-import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.plans.logical.{Filter, _}
-import org.apache.spark.sql.catalyst.plans.{Inner, JoinType}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, ScalaReflection, SqlParser}
-import org.apache.spark.sql.execution.{EvaluatePython, ExplainCommand, LogicalRDD}
-import org.apache.spark.sql.json.JacksonGenerator
-import org.apache.spark.sql.sources.CreateTableUsingAsSelect
+import org.apache.spark.sql.catalyst.analysis.{MultiAlias, ResolvedStar, UnresolvedAttribute}
+import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.plans.{Inner, JoinType}
+import org.apache.spark.sql.catalyst.plans.logical.{Filter, _}
+import org.apache.spark.sql.execution.{EvaluatePython, ExplainCommand, LogicalRDD, SQLExecution}
+import org.apache.spark.sql.json.{JacksonGenerator, JSONRelation}
+import org.apache.spark.sql.sources.{CreateTableUsingAsSelect, HadoopFsRelation, LogicalRelation}
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.Utils
@@ -117,6 +116,9 @@ class DataFrame private[sql](
     @transient val sqlContext: SQLContext,
     @DeveloperApi @transient val queryExecution: SQLContext#QueryExecution)
   extends RDDApi[Row] with Serializable {
+
+  // Note for Spark contributors: if adding or updating any action in `DataFrame`, please make sure
+  // you wrap it with `withNewExecutionId` if this actions doesn't call other action.
 
   /**
    * A constructor that automatically analyzes the logical plan.
@@ -1245,14 +1247,18 @@ class DataFrame private[sql](
    * @group rdd
    * @since 1.3.0
    */
-  override def foreach(f: Row => Unit): Unit = rdd.foreach(f)
+  override def foreach(f: Row => Unit): Unit = withNewExecutionId {
+    rdd.foreach(f)
+  }
 
   /**
    * Applies a function f to each partition of this [[DataFrame]].
    * @group rdd
    * @since 1.3.0
    */
-  override def foreachPartition(f: Iterator[Row] => Unit): Unit = rdd.foreachPartition(f)
+  override def foreachPartition(f: Iterator[Row] => Unit): Unit = withNewExecutionId {
+    rdd.foreachPartition(f)
+  }
 
   /**
    * Returns the first `n` rows in the [[DataFrame]].
@@ -1266,14 +1272,18 @@ class DataFrame private[sql](
    * @group action
    * @since 1.3.0
    */
-  override def collect(): Array[Row] = queryExecution.executedPlan.executeCollect()
+  override def collect(): Array[Row] = withNewExecutionId {
+    queryExecution.executedPlan.executeCollect()
+  }
 
   /**
    * Returns a Java list that contains all of [[Row]]s in this [[DataFrame]].
    * @group action
    * @since 1.3.0
    */
-  override def collectAsList(): java.util.List[Row] = java.util.Arrays.asList(rdd.collect() : _*)
+  override def collectAsList(): java.util.List[Row] = withNewExecutionId {
+    java.util.Arrays.asList(rdd.collect() : _*)
+  }
 
   /**
    * Returns the number of rows in the [[DataFrame]].
@@ -1739,6 +1749,14 @@ class DataFrame private[sql](
   @deprecated("Use write.mode(SaveMode.Append).saveAsTable(tableName)", "1.4.0")
   def insertInto(tableName: String): Unit = {
     write.mode(SaveMode.Append).insertInto(tableName)
+  }
+
+  /**
+   * Wrap a DataFrame action to track all Spark jobs in the body so that we can connect them with
+   * an execution.
+   */
+  private[sql] def withNewExecutionId[T](body: => T): T = {
+    SQLExecution.withNewExecutionId(sqlContext, queryExecution)(body)
   }
 
   ////////////////////////////////////////////////////////////////////////////

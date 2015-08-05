@@ -52,10 +52,22 @@ case class Project(projectList: Seq[NamedExpression], child: SparkPlan) extends 
 case class Filter(condition: Expression, child: SparkPlan) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
 
-  @transient lazy val conditionEvaluator: (Row) => Boolean = newPredicate(condition, child.output)
+  private[sql] override lazy val accumulators = Map(
+    "numInputRows" -> sparkContext.internalAccumulator(0L, "number of input rows"),
+    "numOutputRows" -> sparkContext.internalAccumulator(0L, "number of output rows"))
 
-  protected override def doExecute(): RDD[Row] = child.execute().mapPartitions { iter =>
-    iter.filter(conditionEvaluator)
+  protected override def doExecute(): RDD[Row] = {
+    val numInputRows = accumulator[Long]("numInputRows")
+    val numOutputRows = accumulator[Long]("numOutputRows")
+    child.execute().mapPartitions { iter =>
+      val predicate = newPredicate(condition, child.output)
+      iter.filter { row =>
+        numInputRows += 1
+        val r = predicate(row)
+        if (r) numOutputRows += 1
+        r
+      }
+    }
   }
 
   override def outputOrdering: Seq[SortOrder] = child.outputOrdering

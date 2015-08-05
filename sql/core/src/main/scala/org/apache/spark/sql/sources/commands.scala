@@ -29,14 +29,15 @@ import parquet.hadoop.util.ContextUtil
 import org.apache.spark._
 import org.apache.spark.mapred.SparkHadoopMapRedUtil
 import org.apache.spark.mapreduce.SparkHadoopMapReduceUtil
+import org.apache.spark.sql.{DataFrame, SQLConf, SQLContext, SaveMode}
 import org.apache.spark.sql.catalyst.CatalystTypeConverters
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateProjection
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project}
-import org.apache.spark.sql.execution.RunnableCommand
+import org.apache.spark.sql.execution.{RunnableCommand, SQLExecution}
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, SQLConf, SQLContext, SaveMode}
+
 
 private[sql] case class InsertIntoDataSource(
     logicalRelation: LogicalRelation,
@@ -134,13 +135,25 @@ private[sql] case class InsertIntoHadoopFsRelation(
           needsConversion = false)
       }
 
-      val partitionColumns = relation.partitionColumns.fieldNames
-      if (partitionColumns.isEmpty) {
-        insert(new DefaultWriterContainer(relation, job, isAppend), df)
-      } else {
-        val writerContainer = new DynamicPartitionWriterContainer(
-          relation, job, partitionColumns, PartitioningUtils.DEFAULT_PARTITION_NAME, isAppend)
-        insertWithDynamicPartitions(sqlContext, writerContainer, df, partitionColumns)
+      // For partitioned relation r, r.schema's column ordering can be different from the column
+      // ordering of data.logicalPlan (partition columns are all moved after data column). We
+      // need a Project to adjust the ordering, so that inside InsertIntoHadoopFsRelation, we can
+      // safely apply the schema of r.schema to the data.
+      val project = Project(
+        relation.schema.map(field => new UnresolvedAttribute(Seq(field.name))), query)
+
+      val queryExecution = DataFrame(sqlContext, project).queryExecution
+      SQLExecution.withNewExecutionId(sqlContext, queryExecution) {
+        val df = sqlContext.createDataFrame(queryExecution.toRdd, relation.schema)
+
+        val partitionColumns = relation.partitionColumns.fieldNames
+        if (partitionColumns.isEmpty) {
+          insert(new DefaultWriterContainer(relation, job, isAppend), df)
+        } else {
+          val writerContainer = new DynamicPartitionWriterContainer(
+            relation, job, partitionColumns, PartitioningUtils.DEFAULT_PARTITION_NAME, isAppend)
+          insertWithDynamicPartitions(sqlContext, writerContainer, df, partitionColumns)
+        }
       }
     }
 

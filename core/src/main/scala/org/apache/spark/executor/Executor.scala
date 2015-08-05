@@ -260,6 +260,7 @@ private[spark] class Executor(
             (taskFinishCpu - taskStartCpu) - task.executorDeserializeCpuTime)
           m.setJvmGCTime(computeTotalGcTime() - startGCTime)
           m.setResultSerializationTime(afterSerialization - beforeSerialization)
+          m.updateAccumulators()
         }
 
         val directResult = new DirectTaskResult(valueBytes, accumUpdates, task.metrics.orNull)
@@ -311,6 +312,7 @@ private[spark] class Executor(
             task.metrics.map { m =>
               m.setExecutorRunTime(System.currentTimeMillis() - taskStart)
               m.setJvmGCTime(computeTotalGcTime() - startGCTime)
+              m.updateAccumulators()
               m
             }
           }

@@ -36,6 +36,7 @@ import org.apache.spark.sql.execution.joins.BroadcastHashJoin
 import org.apache.spark.sql.execution.{Filter, _}
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.ui.{SQLListener, SQLTab}
 import org.apache.spark.util.Utils
 
 import scala.collection.JavaConversions._
@@ -71,6 +72,11 @@ class SQLContext(@transient val sparkContext: SparkContext)
    * @return Spark SQL configuration
    */
   protected[sql] def conf = currentSession().conf
+
+  // `listener` should be only used in the driver
+  @transient private[sql] val listener = new SQLListener(this)
+  sparkContext.addSparkListener(listener)
+  sparkContext.ui.foreach(new SQLTab(this, _))
 
   /**
    * Set Spark SQL configuration properties.

@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.execution
 
-import org.apache.spark.{SparkEnv, HashPartitioner, SparkConf}
+import org.apache.spark.{SparkEnv, HashPartitioner}
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.rdd.{RDD, ShuffledRDD}
 import org.apache.spark.shuffle.sort.SortShuffleManager
@@ -25,6 +25,7 @@ import org.apache.spark.sql.catalyst.CatalystTypeConverters
 import org.apache.spark.sql.catalyst.errors._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.physical._
+import org.apache.spark.sql.metric.SQLMetrics
 import org.apache.spark.util.{CompletionIterator, MutablePair}
 import org.apache.spark.util.collection.ExternalSorter
 
@@ -52,13 +53,13 @@ case class Project(projectList: Seq[NamedExpression], child: SparkPlan) extends 
 case class Filter(condition: Expression, child: SparkPlan) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
 
-  private[sql] override lazy val accumulators = Map(
-    "numInputRows" -> sparkContext.internalAccumulator(0L, "number of input rows"),
-    "numOutputRows" -> sparkContext.internalAccumulator(0L, "number of output rows"))
+  private[sql] override lazy val metrics = Map(
+    "numInputRows" -> SQLMetrics.createLongMetric(sparkContext, "number of input rows"),
+    "numOutputRows" -> SQLMetrics.createLongMetric(sparkContext, "number of output rows"))
 
   protected override def doExecute(): RDD[Row] = {
-    val numInputRows = accumulator[Long]("numInputRows")
-    val numOutputRows = accumulator[Long]("numOutputRows")
+    val numInputRows = longMetric("numInputRows")
+    val numOutputRows = longMetric("numOutputRows")
     child.execute().mapPartitions { iter =>
       val predicate = newPredicate(condition, child.output)
       iter.filter { row =>

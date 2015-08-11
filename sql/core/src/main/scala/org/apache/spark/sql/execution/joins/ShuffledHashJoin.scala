@@ -23,6 +23,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.physical.{ClusteredDistribution, Partitioning}
 import org.apache.spark.sql.execution.{BinaryNode, SparkPlan}
+import org.apache.spark.sql.metric.SQLMetrics
 
 /**
  * :: DeveloperApi ::
@@ -40,15 +41,24 @@ case class ShuffledHashJoin(
 
   override def outputPartitioning: Partitioning = left.outputPartitioning
 
-  override protected[sql] val trackNumOfRowsEnabled = true
+  override private[sql] lazy val metrics = Map(
+    "numLeftRows" -> SQLMetrics.createLongMetric(sparkContext, "number of left rows"),
+    "numRightRows" -> SQLMetrics.createLongMetric(sparkContext, "number of right rows"),
+    "numOutputRows" -> SQLMetrics.createLongMetric(sparkContext, "number of output rows"))
 
   override def requiredChildDistribution: Seq[ClusteredDistribution] =
     ClusteredDistribution(leftKeys) :: ClusteredDistribution(rightKeys) :: Nil
 
   protected override def doExecute(): RDD[Row] = {
+    val (numBuildRows, numStreamedRows) = buildSide match {
+      case BuildLeft => (longMetric("numLeftRows"), longMetric("numRightRows"))
+      case BuildRight => (longMetric("numRightRows"), longMetric("numLeftRows"))
+    }
+    val numOutputRows = longMetric("numOutputRows")
+
     buildPlan.execute().zipPartitions(streamedPlan.execute()) { (buildIter, streamIter) =>
-      val hashed = HashedRelation(buildIter, buildSideKeyGenerator)
-      hashJoin(streamIter, hashed)
+      val hashed = HashedRelation(buildIter, numBuildRows, buildSideKeyGenerator)
+      hashJoin(streamIter, numStreamedRows, hashed, numOutputRows)
     }
   }
 }

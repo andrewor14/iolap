@@ -22,6 +22,7 @@ import java.util.{HashMap => JavaHashMap}
 
 import org.apache.spark.sql.catalyst.expressions.{Projection, Row}
 import org.apache.spark.sql.execution.SparkSqlSerializer
+import org.apache.spark.sql.metric.LongSQLMetric
 import org.apache.spark.util.collection.CompactBuffer
 
 
@@ -104,6 +105,7 @@ private[sql] object HashedRelation {
 
   def apply(
       input: Iterator[Row],
+      numInputRows: LongSQLMetric,
       keyGenerator: Projection,
       sizeEstimate: Int = 64): HashedRelation = {
 
@@ -118,6 +120,7 @@ private[sql] object HashedRelation {
     // Create a mapping of buildKeys -> rows
     while (input.hasNext) {
       currentRow = input.next()
+      numInputRows += 1
       val rowKey = keyGenerator(currentRow)
       if (!rowKey.anyNull) {
         val existingMatchList = hashTable.get(rowKey)

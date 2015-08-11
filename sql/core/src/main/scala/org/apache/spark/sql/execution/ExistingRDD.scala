@@ -92,9 +92,6 @@ private[sql] case class LogicalRDD(output: Seq[Attribute], rdd: RDD[Row])(sqlCon
 
 /** Physical plan node for scanning data from an RDD. */
 private[sql] case class PhysicalRDD(output: Seq[Attribute], rdd: RDD[Row]) extends LeafNode {
-
-  override protected[sql] val trackNumOfRowsEnabled = true
-
   protected override def doExecute(): RDD[Row] = rdd
 }
 

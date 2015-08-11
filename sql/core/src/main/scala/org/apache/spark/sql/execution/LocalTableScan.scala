@@ -28,8 +28,6 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
  */
 private[sql] case class LocalTableScan(output: Seq[Attribute], rows: Seq[Row]) extends LeafNode {
 
-  override protected[sql] val trackNumOfRowsEnabled = true
-
   private lazy val rdd = sqlContext.sparkContext.parallelize(rows)
 
   protected override def doExecute(): RDD[Row] = rdd

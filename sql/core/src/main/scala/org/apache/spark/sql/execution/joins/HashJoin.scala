@@ -20,6 +20,7 @@ package org.apache.spark.sql.execution.joins
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.util.collection.CompactBuffer
+import org.apache.spark.sql.metric.LongSQLMetric
 
 
 trait HashJoin {
@@ -49,7 +50,11 @@ trait HashJoin {
   @transient protected lazy val streamSideKeyGenerator: () => MutableProjection =
     newMutableProjection(streamedKeys, streamedPlan.output)
 
-  protected def hashJoin(streamIter: Iterator[Row], hashedRelation: HashedRelation): Iterator[Row] =
+  protected def hashJoin(
+      streamIter: Iterator[Row],
+      numStreamRows: LongSQLMetric,
+      hashedRelation: HashedRelation,
+      numOutputRows: LongSQLMetric): Iterator[Row] =
   {
     new Iterator[Row] {
       private[this] var currentStreamedRow: Row = _
@@ -71,6 +76,7 @@ trait HashJoin {
           case BuildLeft => joinRow(currentHashMatches(currentMatchPosition), currentStreamedRow)
         }
         currentMatchPosition += 1
+        numOutputRows += 1
         ret
       }
 
@@ -86,6 +92,7 @@ trait HashJoin {
 
         while (currentHashMatches == null && streamIter.hasNext) {
           currentStreamedRow = streamIter.next()
+          numStreamRows += 1
           if (!joinKeys(currentStreamedRow).anyNull) {
             currentHashMatches = hashedRelation.get(joinKeys.currentValue)
           }

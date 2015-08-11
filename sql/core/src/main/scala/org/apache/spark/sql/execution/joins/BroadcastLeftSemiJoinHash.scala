@@ -21,6 +21,7 @@ import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, Row}
 import org.apache.spark.sql.execution.{BinaryNode, SparkPlan}
+import org.apache.spark.sql.metric.SQLMetrics
 
 /**
  * :: DeveloperApi ::
@@ -38,8 +39,22 @@ case class BroadcastLeftSemiJoinHash(
 
   override def output: Seq[Attribute] = left.output
 
+  override private[sql] lazy val metrics = Map(
+    "numLeftRows" -> SQLMetrics.createLongMetric(sparkContext, "number of left rows"),
+    "numRightRows" -> SQLMetrics.createLongMetric(sparkContext, "number of right rows"),
+    "numOutputRows" -> SQLMetrics.createLongMetric(sparkContext, "number of output rows"))
+
   protected override def doExecute(): RDD[Row] = {
-    val buildIter = buildPlan.execute().map(_.copy()).collect().toIterator
+    val numLeftRows = longMetric("numLeftRows")
+    val numRightRows = longMetric("numRightRows")
+    val numOutputRows = longMetric("numOutputRows")
+
+    val input = right.execute().map { row =>
+      numRightRows += 1
+      row.copy()
+    }.collect()
+
+    val buildIter = input.toIterator
     val hashSet = new java.util.HashSet[Row]()
     var currentRow: Row = null
 

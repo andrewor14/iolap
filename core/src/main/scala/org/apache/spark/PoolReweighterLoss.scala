@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler._
 
 class PRJob(id: Long, pn: String, sis: Seq[Int]) {

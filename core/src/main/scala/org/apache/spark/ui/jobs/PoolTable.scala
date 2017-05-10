@@ -34,7 +34,8 @@ private[ui] class PoolTable(pools: Seq[Schedulable], parent: StagesTab) {
   }
 
   private def poolTable(
-      makeRow: (Schedulable, HashMap[String, HashMap[Int, StageInfo]]) => Seq[Node],
+      makeRow: (
+        Schedulable, HashMap[String, HashMap[Int, StageInfo]], HashMap[String, Int]) => Seq[Node],
       rows: Seq[Schedulable]): Seq[Node] = {
     <table class="table table-bordered table-striped table-condensed sortable table-fixed">
       <thead>
@@ -43,17 +44,19 @@ private[ui] class PoolTable(pools: Seq[Schedulable], parent: StagesTab) {
         <th>Pool Weight</th>
         <th>Active Stages</th>
         <th>Running Tasks</th>
+        <th>Total Tasks Run</th>
         <th>SchedulingMode</th>
       </thead>
       <tbody>
-        {rows.map(r => makeRow(r, listener.poolToActiveStages))}
+        {rows.map(r => makeRow(r, listener.poolToActiveStages, listener.poolToNumTasksRun))}
       </tbody>
     </table>
   }
 
   private def poolRow(
       p: Schedulable,
-      poolToActiveStages: HashMap[String, HashMap[Int, StageInfo]]): Seq[Node] = {
+      poolToActiveStages: HashMap[String, HashMap[Int, StageInfo]],
+      poolToNumTasksRun: HashMap[String, Int]): Seq[Node] = {
     val activeStages = poolToActiveStages.get(p.name) match {
       case Some(stages) => stages.size
       case None => 0
@@ -68,6 +71,7 @@ private[ui] class PoolTable(pools: Seq[Schedulable], parent: StagesTab) {
       <td>{p.weight}</td>
       <td>{activeStages}</td>
       <td>{p.runningTasks}</td>
+      <td>{poolToNumTasksRun.getOrElse(p.name, 0)}</td>
       <td>{p.schedulingMode}</td>
     </tr>
   }

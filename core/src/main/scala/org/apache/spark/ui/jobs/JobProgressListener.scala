@@ -73,6 +73,7 @@ class JobProgressListener(conf: SparkConf) extends SparkListener with Logging {
   val stageIdToInfo = new HashMap[StageId, StageInfo]
   val stageIdToActiveJobIds = new HashMap[StageId, HashSet[JobId]]
   val poolToActiveStages = HashMap[PoolName, HashMap[StageId, StageInfo]]()
+  val poolToNumTasksRun = HashMap[PoolName, Int]()
   // Total of completed and failed stages that have ever been run.  These may be greater than
   // `completedStages.size` and `failedStages.size` if we have run more stages or jobs than
   // JobProgressListener's retention limits.
@@ -264,6 +265,8 @@ class JobProgressListener(conf: SparkConf) extends SparkListener with Logging {
     poolToActiveStages.get(stageData.schedulingPool).foreach { hashMap =>
       hashMap.remove(stage.stageId)
     }
+    poolToNumTasksRun(stageData.schedulingPool) =
+      poolToNumTasksRun.getOrElse(stageData.schedulingPool, 0) + stage.numTasks
     activeStages.remove(stage.stageId)
     if (stage.failureReason.isEmpty) {
       completedStages += stage

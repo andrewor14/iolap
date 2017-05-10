@@ -597,6 +597,30 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
     }
   }
 
+  /**
+    * Create a new scheduling pool.
+    *
+    * This should only be used if the scheduling mode is FAIR.
+    * All task sets scheduled within the created pool will also be subject to fair scheduling.
+    */
+  def addSchedulablePool(name: String, minShare: Int, weight: Int): Unit = {
+    taskScheduler.rootPool.addSchedulable(new Pool(name, SchedulingMode.FAIR, minShare, weight))
+  }
+
+  /**
+    * Change an existing pool's weight, assuming a pool with the given name already exists.
+    */
+  def setPoolWeight(name: String, weight: Int): Unit = {
+    val sched = taskScheduler.rootPool.schedulableNameToSchedulable.get(name).asInstanceOf[Pool]
+    logInfo(s"Changing pool $name weight from ${sched.weight} to $weight.")
+    sched.weight = weight
+  }
+
+  def getPoolWeight(name: String): Int = {
+    val sched = taskScheduler.rootPool.schedulableNameToSchedulable.get(name).asInstanceOf[Pool]
+    sched.weight
+  }
+
   private[spark] def getLocalProperties: Properties = localProperties.get()
 
   private[spark] def setLocalProperties(props: Properties) {

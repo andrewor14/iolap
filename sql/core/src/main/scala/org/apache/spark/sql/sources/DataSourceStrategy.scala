@@ -313,6 +313,7 @@ private[sql] object DataSourceStrategy extends Strategy with Logging {
     } else {
       rdd
     }
+    relation.tableName.foreach(converted.setName)
     execution.PhysicalRDD(output, converted)
   }
 

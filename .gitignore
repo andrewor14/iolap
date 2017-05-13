@@ -73,3 +73,5 @@ metastore/
 warehouse/
 TempStatsStore/
 sql/hive-thriftserver/test_warehouses
+
+output*.png

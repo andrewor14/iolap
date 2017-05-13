@@ -7,7 +7,7 @@ values = []
 lower = []
 upper = []
 
-with open("students.dat") as f:
+with open("students_100.dat") as f:
   for line in f.readlines():
     (x, value, low, up) = tuple(line.split(" "))
     iters += [int(x)]

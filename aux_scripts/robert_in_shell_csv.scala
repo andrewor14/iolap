@@ -19,7 +19,8 @@ import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 sqlContext.setConf(STREAMED_RELATIONS, "students")
 sqlContext.setConf(NUMBER_BATCHES, batch_count.toString)
 
-var df = sqlContext.read.json(input_filename)
+var df = sqlContext.read.format("com.databricks.spark.csv").option("header", "true").option("inferSchema", "true").load("aux_scripts/interesting_data.csv")
+
 df = df.repartition(partition_count)
 
 val schema = df.schema

@@ -32,21 +32,24 @@ object NagaNagaNaga extends Logging {
         sc.setLocalProperty("spark.scheduler.pool", name)
         PoolReweighterLoss.startTime(name)
         PoolReweighterLoss.start(5)
-        SparkContext.getOrCreate().addSchedulablePool(name, 0, 1)
-        SparkContext.getOrCreate().setLocalProperty("spark.scheduler.pool", name)
         PoolReweighterLoss.register(name, utilFunc)
+        sc.addSchedulablePool(name, 0, 1)
+        sc.setLocalProperty("spark.scheduler.pool", name)
         import org.apache.spark.sql.hive.online.OnlineSQLConf._
         import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
         val numPartitions = sc.getConf.get("spark.naga.numPartitions", "400").toInt
         val inputFile = sc.getConf.get("spark.naga.inputFile", "data/students.json")
-        val tableName = "students"
-        sqlContext.setConf(STREAMED_RELATIONS, tableName)
+        val avgColumn = sc.getConf.get("spark.naga.avgColumn", "uniform")
+        val tableName = name + "students"
+        val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, "")
+        val newStreamedRelations = s"$streamedRelations,$tableName".stripPrefix(",")
+        sqlContext.setConf(STREAMED_RELATIONS, newStreamedRelations)
         sqlContext.setConf(NUMBER_BATCHES, "100")
         val df = sqlContext.read.json(inputFile)
         val newDF = sqlContext.createDataFrame(
           df.rdd.repartition(numPartitions), df.schema)
         newDF.registerTempTable(tableName)
-        val odf = sqlContext.sql(s"SELECT AVG(points) FROM $tableName").online
+        val odf = sqlContext.sql(s"SELECT AVG($avgColumn) FROM $tableName").online
         odf.hasNext // DON'T DELETE THIS LINE
         val result = (1 to odf.progress._2).map { i =>
           assert(odf.hasNext)

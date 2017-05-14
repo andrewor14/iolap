@@ -5,7 +5,7 @@ val query = "SELECT AVG(uniform) FROM students"
 
 
 val input_filename = "data/students.json"
-val output_filename = "students_whoaaaa.dat"
+val output_filename = "data/students.dat"
 
 import java.io._
 import org.apache.spark.sql.types._

@@ -34,7 +34,6 @@ object NagaNagaNaga extends Logging {
         PoolReweighterLoss.start(5)
         PoolReweighterLoss.register(name, utilFunc)
         sc.addSchedulablePool(name, 0, 1)
-        sc.setLocalProperty("spark.scheduler.pool", name)
         import org.apache.spark.sql.hive.online.OnlineSQLConf._
         import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
         val numPartitions = sc.getConf.get("spark.naga.numPartitions", "400").toInt
@@ -44,7 +43,9 @@ object NagaNagaNaga extends Logging {
         val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, "")
         val newStreamedRelations = s"$streamedRelations,$tableName".stripPrefix(",")
         sqlContext.setConf(STREAMED_RELATIONS, newStreamedRelations)
-        sqlContext.setConf(NUMBER_BATCHES, "100")
+        sqlContext.setConf(NUMBER_BATCHES, sqlContext.getConf(NUMBER_BATCHES, "100"))
+        sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS,
+          sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "500"))
         val df = sqlContext.read.json(inputFile)
         val newDF = sqlContext.createDataFrame(
           df.rdd.repartition(numPartitions), df.schema)

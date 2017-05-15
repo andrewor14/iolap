@@ -29,21 +29,25 @@ object NagaNagaNaga {
 
   def makeThread(sqlContext: SQLContext, name: String): Thread = {
     new Thread {
-      private val sc = sqlContext.sparkContext
-      sc.setLocalProperty("spark.scheduler.pool", name)
-      sc.addSchedulablePool(name, 0, 1)
-      private val numPartitions = sc.getConf.get("spark.naga.numPartitions", "100").toInt
-      private val inputFile = sc.getConf.get("spark.naga.inputFile", "data/students.json")
-      private val avgColumn = sc.getConf.get("spark.naga.avgColumn", "uniform")
       private val tableName = name
-      private val df = sqlContext.read.json(inputFile)
-      private val newDF = sqlContext.createDataFrame(
-        df.rdd.repartition(numPartitions), df.schema)
-      newDF.registerTempTable(tableName)
-      private val odf = sqlContext.sql(s"SELECT AVG($avgColumn) FROM $tableName").online
-      odf.hasNext // DON'T DELETE THIS LINE
+
+      {
+        val sc = sqlContext.sparkContext
+        val numPartitions = sc.getConf.get("spark.naga.numPartitions", "100").toInt
+        val inputFile = sc.getConf.get("spark.naga.inputFile", "data/students.json")
+        val df = sqlContext.read.json(inputFile)
+        val newDF = sqlContext.createDataFrame(
+          df.rdd.repartition(numPartitions), df.schema)
+        newDF.registerTempTable(tableName)
+      }
 
       override def run(): Unit = {
+        val sc = sqlContext.sparkContext
+        sc.setLocalProperty("spark.scheduler.pool", name)
+        sc.addSchedulablePool(name, 0, 1)
+        val avgColumn = sc.getConf.get("spark.naga.avgColumn", "uniform")
+        val odf = sqlContext.sql(s"SELECT AVG($avgColumn) FROM $tableName").online
+        odf.hasNext // DON'T DELETE THIS LINE
         if (sc.getConf.get("spark.naga.enabled", "true").toBoolean) {
           PoolReweighterLoss.startTime(name)
           PoolReweighterLoss.start(5)
@@ -58,15 +62,19 @@ object NagaNagaNaga {
             r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(0),
             r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(1),
             r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2))
-        }
-          .map { case (time, a, b, c) => s"$time $a $b $c" }
-          .mkString("\n")
-        println(
-          "\n\n================================================================\n" +
-            s"POOL($name)\n" + resultString +
-            "\n================================================================\n\n"
-        )
+        }.map { case (time, a, b, c) => s"$time $a $b $c" }.mkString("\n")
+        writeToFile(resultString + "\n", name + ".dat")
       }
+    }
+  }
+
+  def writeToFile(s: String, filename: String): Unit = {
+    import java.io.{File, PrintWriter}
+    val pw = new PrintWriter(new File(filename))
+    try {
+      pw.write(s)
+    } finally {
+      pw.close()
     }
   }
 

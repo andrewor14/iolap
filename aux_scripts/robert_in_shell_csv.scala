@@ -1,7 +1,7 @@
 
 val batch_count = 100
 val partition_count = 400
-val query = "SELECT AVG(uniform) FROM students"
+val query = "SELECT AVG(lognormal) FROM students"
 
 
 val input_filename = "data/students.json"

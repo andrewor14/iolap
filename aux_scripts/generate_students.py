@@ -2,7 +2,7 @@ import random, json, string
 import csv
 from numpy import random as nrand
 import sys
-GB = 0.01
+GB = 0.1
 count = int(1.1163*(2**22) * GB)
 fields = ["name", "index", "coin_toss", "normal", "zipf", "uniform", 
           "twin_peak", "geometric", "exponential", "lognormal", "zero"]

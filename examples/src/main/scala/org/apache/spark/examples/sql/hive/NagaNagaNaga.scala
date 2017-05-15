@@ -32,9 +32,11 @@ object NagaNagaNaga extends Logging {
       override def run(): Unit = {
         val sc = sqlContext.sparkContext
         sc.setLocalProperty("spark.scheduler.pool", name)
-        PoolReweighterLoss.startTime(name)
-        PoolReweighterLoss.start(5)
-        PoolReweighterLoss.register(name, utilFunc)
+        if (sc.getConf.get("spark.naga.enabled", "true").toBoolean) {
+          PoolReweighterLoss.startTime(name)
+          PoolReweighterLoss.start(5)
+          PoolReweighterLoss.register(name, utilFunc)
+        }
         sc.addSchedulablePool(name, 0, 1)
         val numPartitions = sc.getConf.get("spark.naga.numPartitions", "100").toInt
         val inputFile = sc.getConf.get("spark.naga.inputFile", "data/students.json")

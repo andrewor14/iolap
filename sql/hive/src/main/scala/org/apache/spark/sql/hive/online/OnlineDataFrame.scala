@@ -99,13 +99,15 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
     do {
       rows = next().collect()
     } while(!isValid)
-    assert(rows.length == 1, "Wrong type of query")
-    val innerRow = rows(0).get(0).asInstanceOf[org.apache.spark.sql.Row]
-    val lower = innerRow.getDouble(1)
-    val upper = innerRow.getDouble(2)
-    assert(upper >= lower, s"upper bound $upper was not >= lower bound $lower")
-    val confidenceIntervalSize = upper - lower
-    PoolReweighterLoss.updateLoss(confidenceIntervalSize)
+    if (sparkContext.getConf.get("spark.naga.enabled", "true").toBoolean) {
+      assert(rows.length == 1, "Wrong type of query")
+      val innerRow = rows(0).get(0).asInstanceOf[org.apache.spark.sql.Row]
+      val lower = innerRow.getDouble(1)
+      val upper = innerRow.getDouble(2)
+      assert(upper >= lower, s"upper bound $upper was not >= lower bound $lower")
+      val confidenceIntervalSize = upper - lower
+      PoolReweighterLoss.updateLoss(confidenceIntervalSize)
+    }
     rows
   }
 

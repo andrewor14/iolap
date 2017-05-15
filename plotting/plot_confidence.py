@@ -7,7 +7,7 @@ values = []
 lower = []
 upper = []
 
-with open("students_100.dat") as f:
+with open("/Users/robertmacdavid/Documents/Github/andrewor/iolap/data/students.dat") as f:
   for line in f.readlines():
     (x, value, low, up) = tuple(line.split(" "))
     iters += [int(x)]
@@ -26,7 +26,18 @@ ax.set_ylabel("Answer")
 ax.legend(loc = "lower right")
 plt.savefig("output.png")
 
-# Plot error (Note: this is not correct!)
+# Plot interval size
+true_value = values[-1]
+interval_size = [upper[i] - lower[i] for i in range(len(lower))]
+
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+ax.plot(iters, interval_size, "-x", label="Interval Size")
+ax.set_xlabel("Iteration")
+ax.set_ylabel("Loss")
+plt.savefig("output2.png")
+
+# Plot error (Note: this is not correct!?)
 true_value = values[-1]
 error = [100 * (true_value - v) / true_value for v in values]
 fig = plt.figure()
@@ -34,5 +45,24 @@ ax = fig.add_subplot(1, 1, 1)
 ax.plot(iters, error, "-x", label="error")
 ax.set_xlabel("Iteration")
 ax.set_ylabel("Error (%)")
-plt.savefig("output2.png")
+plt.savefig("output3.png")
+
+# Plot delta error versus delta confidence interval size
+delta_iters = iters[:-1]
+delta_error = [abs(error[i+1]) - abs(error[i]) for i in range(len(error) - 1)]
+max_delta_error = max([abs(delta) for delta in delta_error])
+delta_error = [error/max_delta_error for error in delta_error]
+
+delta_interval_size = [abs(interval_size[i+1]) - abs(interval_size[i]) for i in range(len(interval_size) - 1)]
+max_delta_interval = max([abs(delta) for delta in delta_interval_size])
+delta_interval_size = [size/max_delta_interval for size in delta_interval_size]
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+ax.plot(delta_iters, delta_error, "-x", label="Normalized Delta Error")
+ax.plot(delta_iters, delta_interval_size, "-x", label="Normalized Delta Interval Size")
+ax.set_xlabel("Iteration")
+ax.set_ylabel("Normalized Delta")
+ax.legend(loc = "lower right")
+plt.savefig("output4.png")
+
 

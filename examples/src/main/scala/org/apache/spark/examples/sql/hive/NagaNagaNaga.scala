@@ -17,7 +17,7 @@
 
 package org.apache.spark.examples.sql.hive
 
-import org.apache.spark.{Logging, PoolReweighterLoss, SparkConf, SparkContext}
+import org.apache.spark.{Logging, PoolReweighterLoss, SparkContext}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
@@ -25,9 +25,9 @@ import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 
 object NagaNagaNaga extends Logging {
 
-  private def utilFunc(time: Long, qual: Double): Double = 0.0
+  def utilFunc(time: Long, qual: Double): Double = 0.0
 
-  private def makeThread(sqlContext: SQLContext, name: String): Thread = {
+  def makeThread(sqlContext: SQLContext, name: String): Thread = {
     new Thread {
       override def run(): Unit = {
         val sc = sqlContext.sparkContext
@@ -36,7 +36,7 @@ object NagaNagaNaga extends Logging {
         PoolReweighterLoss.start(5)
         PoolReweighterLoss.register(name, utilFunc)
         sc.addSchedulablePool(name, 0, 1)
-        val numPartitions = sc.getConf.get("spark.naga.numPartitions", "400").toInt
+        val numPartitions = sc.getConf.get("spark.naga.numPartitions", "100").toInt
         val inputFile = sc.getConf.get("spark.naga.inputFile", "data/students.json")
         val avgColumn = sc.getConf.get("spark.naga.avgColumn", "uniform")
         val tableName = name
@@ -48,33 +48,31 @@ object NagaNagaNaga extends Logging {
         odf.hasNext // DON'T DELETE THIS LINE
         val result = (1 to odf.progress._2).map { i =>
           assert(odf.hasNext)
-          odf.collectNext()
+          (System.currentTimeMillis, odf.collectNext())
         }
-        val resultString = result.map { r =>
-           (r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(0),
+        val resultString = result.map { case (time, r) =>
+          (time,
+            r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(0),
             r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(1),
             r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2))
-          }
-          .zipWithIndex
-          .map { case ((a, b, c), i) => s"${i + 1} $a $b $c" }
+        }
+          .map { case (time, a, b, c) => s"$time $a $b $c" }
           .mkString("\n")
         logInfo(
           "\n\n================================================================\n" +
             s"POOL($name)\n" + resultString +
-          "\n================================================================\n\n"
+            "\n================================================================\n\n"
         )
       }
     }
   }
 
-  def main(args: Array[String]) {
-    val conf = new SparkConf().setAppName("Naga")
-    val sc = new SparkContext(conf)
+  def runTheThing(sc: SparkContext): Unit = {
     val sqlContext = new SQLContext(sc)
     val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
     val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, "naga1,naga2")
     val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "500")
-    val waitPeriod = conf.get("spark.naga.waitPeriodMs", "5000").toLong
+    val waitPeriod = sc.getConf.get("spark.naga.waitPeriodMs", "5000").toLong
     sqlContext.setConf(STREAMED_RELATIONS, streamedRelations)
     sqlContext.setConf(NUMBER_BATCHES, numBatches)
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)
@@ -85,7 +83,6 @@ object NagaNagaNaga extends Logging {
       Thread.sleep(waitPeriod)
     }
     threads.foreach { t => t.join() }
-    sc.stop()
   }
 
 }

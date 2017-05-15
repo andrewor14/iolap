@@ -17,37 +17,38 @@
 
 package org.apache.spark.examples.sql.hive
 
-import org.apache.spark.{Logging, PoolReweighterLoss}
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.hive.online.OnlineSQLConf._
-import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 
+object NagaNagaNaga {
 
-object NagaNagaNaga extends Logging {
+  import org.apache.spark.PoolReweighterLoss
+  import org.apache.spark.sql.SQLContext
+  import org.apache.spark.sql.hive.online.OnlineSQLConf._
+  import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 
   def utilFunc(time: Long, qual: Double): Double = 0.0
 
   def makeThread(sqlContext: SQLContext, name: String): Thread = {
     new Thread {
+      private val sc = sqlContext.sparkContext
+      sc.setLocalProperty("spark.scheduler.pool", name)
+      if (sc.getConf.get("spark.naga.enabled", "true").toBoolean) {
+        PoolReweighterLoss.startTime(name)
+        PoolReweighterLoss.start(5)
+        PoolReweighterLoss.register(name, utilFunc)
+      }
+      sc.addSchedulablePool(name, 0, 1)
+      private val numPartitions = sc.getConf.get("spark.naga.numPartitions", "100").toInt
+      private val inputFile = sc.getConf.get("spark.naga.inputFile", "data/students.json")
+      private val avgColumn = sc.getConf.get("spark.naga.avgColumn", "uniform")
+      private val tableName = name
+      private val df = sqlContext.read.json(inputFile)
+      private val newDF = sqlContext.createDataFrame(
+        df.rdd.repartition(numPartitions), df.schema)
+      newDF.registerTempTable(tableName)
+      private val odf = sqlContext.sql(s"SELECT AVG($avgColumn) FROM $tableName").online
+      odf.hasNext // DON'T DELETE THIS LINE
+
       override def run(): Unit = {
-        val sc = sqlContext.sparkContext
-        sc.setLocalProperty("spark.scheduler.pool", name)
-        if (sc.getConf.get("spark.naga.enabled", "true").toBoolean) {
-          PoolReweighterLoss.startTime(name)
-          PoolReweighterLoss.start(5)
-          PoolReweighterLoss.register(name, utilFunc)
-        }
-        sc.addSchedulablePool(name, 0, 1)
-        val numPartitions = sc.getConf.get("spark.naga.numPartitions", "100").toInt
-        val inputFile = sc.getConf.get("spark.naga.inputFile", "data/students.json")
-        val avgColumn = sc.getConf.get("spark.naga.avgColumn", "uniform")
-        val tableName = name
-        val df = sqlContext.read.json(inputFile)
-        val newDF = sqlContext.createDataFrame(
-          df.rdd.repartition(numPartitions), df.schema)
-        newDF.registerTempTable(tableName)
-        val odf = sqlContext.sql(s"SELECT AVG($avgColumn) FROM $tableName").online
-        odf.hasNext // DON'T DELETE THIS LINE
         val result = (1 to odf.progress._2).map { i =>
           assert(odf.hasNext)
           (System.currentTimeMillis, odf.collectNext())
@@ -74,7 +75,7 @@ object NagaNagaNaga extends Logging {
     val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
     val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, "naga1,naga2")
     val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "500")
-    val waitPeriod = sc.getConf.get("spark.naga.waitPeriodMs", "5000").toLong
+    val waitPeriod = sc.getConf.get("spark.naga.waitPeriodMs", "60000").toLong
     sqlContext.setConf(STREAMED_RELATIONS, streamedRelations)
     sqlContext.setConf(NUMBER_BATCHES, numBatches)
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)

@@ -31,11 +31,6 @@ object NagaNagaNaga {
     new Thread {
       private val sc = sqlContext.sparkContext
       sc.setLocalProperty("spark.scheduler.pool", name)
-      if (sc.getConf.get("spark.naga.enabled", "true").toBoolean) {
-        PoolReweighterLoss.startTime(name)
-        PoolReweighterLoss.start(5)
-        PoolReweighterLoss.register(name, utilFunc)
-      }
       sc.addSchedulablePool(name, 0, 1)
       private val numPartitions = sc.getConf.get("spark.naga.numPartitions", "100").toInt
       private val inputFile = sc.getConf.get("spark.naga.inputFile", "data/students.json")
@@ -49,6 +44,11 @@ object NagaNagaNaga {
       odf.hasNext // DON'T DELETE THIS LINE
 
       override def run(): Unit = {
+        if (sc.getConf.get("spark.naga.enabled", "true").toBoolean) {
+          PoolReweighterLoss.startTime(name)
+          PoolReweighterLoss.start(5)
+          PoolReweighterLoss.register(name, utilFunc)
+        }
         val result = (1 to odf.progress._2).map { i =>
           assert(odf.hasNext)
           (System.currentTimeMillis, odf.collectNext())

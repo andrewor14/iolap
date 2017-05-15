@@ -17,7 +17,7 @@
 
 package org.apache.spark.examples.sql.hive
 
-import org.apache.spark.{Logging, PoolReweighterLoss, SparkContext}
+import org.apache.spark.{Logging, PoolReweighterLoss}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
@@ -58,7 +58,7 @@ object NagaNagaNaga extends Logging {
         }
           .map { case (time, a, b, c) => s"$time $a $b $c" }
           .mkString("\n")
-        logInfo(
+        println(
           "\n\n================================================================\n" +
             s"POOL($name)\n" + resultString +
             "\n================================================================\n\n"
@@ -67,8 +67,8 @@ object NagaNagaNaga extends Logging {
     }
   }
 
-  def runTheThing(sc: SparkContext): Unit = {
-    val sqlContext = new SQLContext(sc)
+  def runTheThing(sqlContext: SQLContext): Unit = {
+    val sc = sqlContext.sparkContext
     val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
     val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, "naga1,naga2")
     val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "500")

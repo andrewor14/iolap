@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 
 append = "50bootstrap"
-append500 = "500bootstrap"
+append1000 = "1000bootstrap"
 
 def read_dat(name):
   iters_, values_, lower_, upper_ = [], [], [], []
@@ -17,7 +17,7 @@ def read_dat(name):
   return (iters_, values_, lower_, upper_)
 
 (iters, values, lower, upper) = read_dat(append)
-(iters500, values500, lower500, upper500) = read_dat(append500)
+(iters1000, values1000, lower1000, upper1000) = read_dat(append1000)
 
 true_value = values[-1]
 
@@ -35,12 +35,12 @@ plt.savefig("output_" + append + ".png")
 
 # Plot interval size
 interval_size = [upper[i] - lower[i] for i in range(len(lower))]
-interval_size500 = [upper500[i] - lower500[i] for i in range(len(lower500))]
+interval_size1000 = [upper1000[i] - lower1000[i] for i in range(len(lower1000))]
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
-ax.plot(iters, interval_size, "-", label="50 bootstrap trials", color="gray")
-ax.plot(iters500, interval_size500, "-", label="500 bootstrap trials", color="red")
+ax.plot(iters, interval_size, "-", label="50 bootstrap trials", color="#AAAAAA")
+ax.plot(iters1000, interval_size1000, "-", label="1000 bootstrap trials", color="red")
 ax.set_xlabel("Iteration")
 ax.set_ylabel("Confidence Interval Size")
 ax.legend()

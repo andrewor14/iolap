@@ -17,19 +17,22 @@ with open("/Users/robertmacdavid/Documents/Github/andrewor/iolap/data/students_5
     lower += [float(low)]
     upper += [float(up)]
 
+
+true_value = values[-1]
+
 # Plot raw values
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
-ax.plot(iters, values, "-x", label="values")
-ax.plot(iters, lower, "-x", label="lower")
-ax.plot(iters, upper, "-x", label="upper")
+ax.plot(iters, values, "-x", label="Approximate Answer")
+ax.plot(iters, lower, "-x", label="Lower Confidence Bound")
+ax.plot(iters, upper, "-x", label="Upper Confidence Bound")
+ax.plot(iters, [true_value]*len(iters), "--", label="True Answer")
 ax.set_xlabel("Iteration")
 ax.set_ylabel("Answer")
-ax.legend(loc = "lower right")
+ax.legend(loc = "upper right")
 plt.savefig("output" + append + ".png")
 
 # Plot interval size
-true_value = values[-1]
 interval_size = [upper[i] - lower[i] for i in range(len(lower))]
 
 fig = plt.figure()
@@ -45,7 +48,9 @@ error = [100 * (true_value - v) / true_value for v in values]
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 ax.plot(iters, error, "-x", label="error")
+ax.plot(iters, [0]*len(error), "--", label="error")
 ax.set_xlabel("Iteration")
+#ax.set_ylim([-0.9, 0.1])
 ax.set_ylabel("True Error (%)")
 plt.savefig("output3" + append + ".png")
 

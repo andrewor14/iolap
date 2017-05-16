@@ -120,6 +120,9 @@ object PoolReweighterLoss extends Logging {
 
 
   private[PoolReweighterLoss] def batchUpdate(): Unit = {
+    if (pool2numCores.isEmpty) {
+      return
+    }
     val totalCores = SparkContext.getOrCreate().defaultParallelism
     def diff(t: (String, Double)) = t._2
     val heap = new mutable.PriorityQueue[(String, Double)]()(Ordering.by(diff))

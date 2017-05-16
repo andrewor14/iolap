@@ -64,6 +64,7 @@ object NagaNagaNaga {
             r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2))
         }.map { case (time, a, b, c) => s"$time $a $b $c" }.mkString("\n")
         writeToFile(resultString + "\n", name + ".dat")
+        PoolReweighterLoss.done(name)
       }
     }
   }

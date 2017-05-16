@@ -82,8 +82,8 @@ object NagaNagaNaga {
     val sc = sqlContext.sparkContext
     val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
     val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, "naga1,naga2")
-    val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "500")
-    val waitPeriod = sc.getConf.get("spark.naga.waitPeriodMs", "60000").toLong
+    val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "200")
+    val waitPeriod = sc.getConf.get("spark.naga.waitPeriodMs", "10000").toLong
     sqlContext.setConf(STREAMED_RELATIONS, streamedRelations)
     sqlContext.setConf(NUMBER_BATCHES, numBatches)
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)

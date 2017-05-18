@@ -131,36 +131,7 @@ object PoolReweighterLoss extends Logging {
     var remainingCores = totalCores
     val fairshare = totalCores / pool2numCores.size
     val minCore = 3
-
-    if (isFair) {
-      // Fair share
-      for ((poolName: String, numCores: Int) <- pool2numCores) {
-        tokens(poolName) = 1 * 1000 * batchTime
-      }
-    } else {
-      // SLAQ
-      val lastLosses = pool2numCores.keys.map { poolName =>
-        if (batchWindows.contains(poolName) && batchWindows(poolName).nonEmpty) {
-          batchWindows(poolName).last.loss
-        } else {
-          0
-        }
-      }.toSeq
-      val sumLastLosses = lastLosses.sum
-      pool2numCores.keys.zipWithIndex.foreach { case (poolName, i) =>
-        val lastLoss = lastLosses(i)
-        if (lastLoss == 0) {
-          // Do fair share. HACK.
-          tokens(poolName) = remainingCores * 1000 * batchTime
-        } else {
-          tokens(poolName) =
-            (remainingCores * 1000 * batchTime * lastLosses(i) / sumLastLosses).toLong
-        }
-      }
-    }
-
     // first enqueue everybody at 1
-    /*
     for((poolName: String, _) <- pool2numCores) {
       if (batchWindows(poolName).size <= 1) {
         pool2numCores(poolName) = fairshare
@@ -230,7 +201,6 @@ object PoolReweighterLoss extends Logging {
         tokens(poolName) = 1 * 1000 * batchTime
       }
     }
-    */
 
   }
 

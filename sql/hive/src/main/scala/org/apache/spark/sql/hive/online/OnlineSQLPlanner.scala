@@ -157,7 +157,7 @@ case class IdentifyStreamedRelations(streamed: Set[String], controller: OnlineDa
           s"streamed relations = ${streamed.mkString(",")},\n" +
           s"plan class name = ${scan.getClass.getSimpleName},\n" +
           s"plan = ${scan.simpleString}" +
-          Option(extraString).map { s => s",\n$s" }.getOrElse(""))
+          extraString.map { s => s",\n$s" }.getOrElse(""))
         OTStreamedRelation(scan)(controller)
     }
   }

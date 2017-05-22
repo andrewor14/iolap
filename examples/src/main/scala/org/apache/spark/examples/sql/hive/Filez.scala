@@ -18,13 +18,13 @@
 package org.apache.spark.examples.sql.hive
 
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.hive.HiveContext
 
 object Filez {
 
   def main(args: Array[String]): Unit = {
     val sc = SparkContext.getOrCreate()
-    val sqlContext = new SQLContext(sc)
+    val sqlContext = new HiveContext(sc)
     import org.apache.spark.sql.hive.online.OnlineSQLConf._
     import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
     import java.io.{File, PrintWriter}

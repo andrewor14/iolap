@@ -1,0 +1,97 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.spark.examples.sql.hive
+
+import java.io.{File, PrintWriter}
+
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.sql.hive.online.OnlineSQLConf._
+import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
+
+object RobertInTheFile {
+
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf
+    val sc = SparkContext.getOrCreate(conf)
+    val sqlContext = new HiveContext(sc)
+    // Some IOLAP confs
+    val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, "students")
+    val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
+    val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "100")
+    sqlContext.setConf(STREAMED_RELATIONS, streamedRelations)
+    sqlContext.setConf(NUMBER_BATCHES, numBatches)
+    sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)
+    // Make some threads, one per streamed relation
+    val intervalMs = conf.get("spark.naga.intervalMs", "5000").toLong
+    val threads = streamedRelations.split(",").map(makeThread)
+    threads.foreach { t =>
+      t.start()
+      Thread.sleep(intervalMs)
+    }
+    threads.foreach(_.join())
+  }
+
+  private def makeThread(poolName: String): Thread = {
+    new Thread {
+      override def run(): Unit = {
+        val sc = SparkContext.getOrCreate()
+        sc.setLocalProperty("spark.scheduler.pool", poolName)
+        // Some confs
+        val conf = sc.getConf
+        val numPartitions = conf.get("spark.naga.numPartitions", "100").toInt
+        val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
+        val outputPathSuffix = conf.get("spark.naga.outputPathSuffix", "output.dat")
+        val outputPath = s"$poolName.$outputPathSuffix"
+        val selectArg = conf.get("spark.naga.selectArg", "AVG(uniform)")
+        val sqlContext = SQLContext.getOrCreate(sc)
+        val df = sqlContext.read.json(inputPath)
+        // Repartition on the underlying RDD
+        val newDF = sqlContext.createDataFrame(df.rdd.repartition(numPartitions), df.schema)
+        newDF.registerTempTable(poolName)
+        val odf = sqlContext.sql(s"SELECT $selectArg FROM $poolName").online
+        // DO NOT REMOVE THIS LINE!
+        odf.hasNext
+        val (_, numTotalBatches) = odf.progress
+        // Run IOLAP
+        val result = (1 to numTotalBatches).map { _ => assert(odf.hasNext); odf.collectNext() }
+        val resultString = result.zipWithIndex.map { case (r, i) =>
+          val batchNumber = i + 1
+          val answer = r(0).get(0).asInstanceOf[Row].getDouble(0)
+          val lower = r(0).get(0).asInstanceOf[Row].getDouble(1)
+          val upper = r(0).get(0).asInstanceOf[Row].getDouble(2)
+          s"$batchNumber $answer $lower $upper"
+        }.mkString("\n")
+        // Print and write result to file
+        println(
+          "\n\n\n**************************************\n" +
+          s"(data for '$poolName')\n" +
+          resultString +
+          "\n**************************************\n\n\n")
+        val writer = new PrintWriter(new File(outputPath))
+        try {
+          writer.write(resultString + "\n")
+        } finally {
+          writer.close()
+        }
+      }
+    }
+  }
+
+}

@@ -27,13 +27,14 @@ object Filez {
     val sqlContext = new SQLContext(sc)
     import org.apache.spark.sql.hive.online.OnlineSQLConf._
     import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
+    import java.io.{File, PrintWriter}
     val numPartitions = 100
     sqlContext.setConf(STREAMED_RELATIONS, "students")
     sqlContext.setConf(NUMBER_BATCHES, "100")
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, "100")
     val poolName = "vappa"
     sc.setLocalProperty("spark.scheduler.pool", poolName)
-    val df = sqlContext.read.json("data/students.json")
+    val df = sqlContext.read.json("data/students.half.json")
     val newDF = sqlContext.createDataFrame(
       df.rdd.repartition(numPartitions), df.schema)
     newDF.registerTempTable("students")
@@ -41,11 +42,18 @@ object Filez {
     odf.hasNext
     val result = (1 to odf.progress._2)
       .map { i => assert(odf.hasNext); odf.collectNext() }
-    result.map { r =>
+    val resultString = result.map { r =>
       (r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(0),
-        r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(1),
-        r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2)) }
-      .zipWithIndex.foreach { case ((a, b, c), i) => println(s"${i + 1} $a $b $c") }
+      r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(1),
+      r(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2)) }
+    .zipWithIndex.map { case ((a, b, c), i) => s"${i + 1} $a $b $c" }.mkString("\n")
+    // Write to file
+    val pw = new PrintWriter(new File("output.dat"))
+    try {
+      pw.write(resultString + "\n")
+    } finally {
+      pw.close()
+    }
   }
 
 }

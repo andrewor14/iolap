@@ -113,23 +113,51 @@ case class IdentifyStreamedRelations(streamed: Set[String], controller: OnlineDa
 
   private[this] val map = new mutable.HashMap[String, RelationReference]()
 
+  private def PRINTLN(s: String): Unit = {
+    val newlines = "\n\n\n"
+    val bar = "======================================"
+    println(newlines + bar + "\n" + s + "\n" + bar + newlines)
+  }
+
   override def apply(plan: SparkPlan): SparkPlan = {
     plan.transformUp {
       case scan@PhysicalRDD(_, rdd) if streamed.contains(rdd.name) =>
+        PRINTLN("(1) physical rdd:\n" +
+          s"name = ${Option(rdd.name).getOrElse("n/a")},\n" +
+          s"num parts = ${rdd.partitions.length},\n" +
+          s"rdd class name = ${rdd.getClass.getSimpleName},\n" +
+          s"plan class name = ${scan.getClass.getSimpleName},\n" +
+          s"plan = ${scan.simpleString}")
         val reference = getOrNewRef(rdd.name, rdd.partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan@HiveTableScan(_, r, _) if streamed.contains(r.tableName) =>
+        PRINTLN("(2) hive table scan")
         require(!r.hiveQlTable.isPartitioned, PARTITION_ERROR)
         val reference = getOrNewRef(r.tableName, scan.execute().partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan@InMemoryColumnarTableScan(_, _, r@InMemoryRelation(_, _, _, _, _, Some(tableName)))
         if streamed.contains(tableName) =>
+        PRINTLN("(3) in memory table scan")
         val reference = getOrNewRef(tableName, r.cachedColumnBuffers.partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan: LeafNode =>
+        val extraString = scan match {
+          case PhysicalRDD(_, rdd) =>
+            Some(
+              s"rdd name = ${Option(rdd.name).getOrElse("n/a")},\n" +
+              s"rdd num parts = ${rdd.partitions.length},\n" +
+              s"rdd class name = ${rdd.getClass.getSimpleName}\n")
+          case _ =>
+            None
+        }
+        PRINTLN(s"(4) leaf node,\n" +
+          s"streamed relations = ${streamed.mkString(",")},\n" +
+          s"plan class name = ${scan.getClass.getSimpleName},\n" +
+          s"plan = ${scan.simpleString}" +
+          Option(extraString).map { s => s",\n$s" }.getOrElse(""))
         OTStreamedRelation(scan)(controller)
     }
   }

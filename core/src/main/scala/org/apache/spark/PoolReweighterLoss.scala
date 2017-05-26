@@ -17,8 +17,6 @@
 
 package org.apache.spark
 
-import java.util.concurrent.ConcurrentHashMap
-
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -40,11 +38,6 @@ class PRBatchWindow {
 // Main API
 object PoolReweighterLoss extends Logging {
 
-  type UtilityFunc = (Long, Double) => Double
-
-  private[PoolReweighterLoss] val utilityFuncs =
-    new ConcurrentHashMap[String, UtilityFunc]
-  private[PoolReweighterLoss] val startTime = new ConcurrentHashMap[String, Long]
   private val batchWindows = new mutable.HashMap[String, ArrayBuffer[PRBatchWindow]]
   val pool2numCores = new mutable.HashMap[String, Int]
   val numTasksComplete = new mutable.HashMap[String, Int]
@@ -54,6 +47,8 @@ object PoolReweighterLoss extends Logging {
   var batchTime = 0
   var isFair = false
   @volatile var isRunning = false
+
+  def hasRegisteredApplications: Boolean = batchWindows.nonEmpty
 
   def updateLoss(loss: Double): Unit = {
     val poolName = SparkContext.getOrCreate.getLocalProperty("spark.scheduler.pool")
@@ -92,14 +87,8 @@ object PoolReweighterLoss extends Logging {
     thread.start()
   }
 
-  def registerUtilityFunction(poolName: String, func: UtilityFunc): Unit = {
-    utilityFuncs.put(poolName, func)
-  }
-
   // register your rdd and how often you want to batch
-  def register(poolName: String,
-               utilFunc: UtilityFunc): Unit = {
-    registerUtilityFunction(poolName, utilFunc)
+  def register(poolName: String): Unit = {
     val numCores = SparkContext.getOrCreate().defaultParallelism
     // pool2numCores.put(poolName, Math.max(numCores / (pool2numCores.size + 1), 3))
     pool2numCores.put(poolName, -1)
@@ -108,10 +97,6 @@ object PoolReweighterLoss extends Logging {
     numExpIters.put(poolName, 1)
     tokens.put(poolName, 0)
     batchUpdate()
-  }
-
-  def startTime(poolName: String): Unit = {
-    startTime.put(poolName, System.currentTimeMillis())
   }
 
   def kill(): Unit = {

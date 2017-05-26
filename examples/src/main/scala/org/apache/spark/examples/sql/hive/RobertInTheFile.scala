@@ -19,7 +19,7 @@ package org.apache.spark.examples.sql.hive
 
 import java.io.{File, PrintWriter}
 
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{PoolReweighterLoss, SparkConf, SparkContext}
 import org.apache.spark.sql.{Row, SQLContext}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.sql.hive.online.OnlineSQLConf._
@@ -60,6 +60,12 @@ object RobertInTheFile {
         val outputPathSuffix = conf.get("spark.naga.outputPathSuffix", "output.dat")
         val outputPath = s"$poolName.$outputPathSuffix"
         val selectArg = conf.get("spark.naga.selectArg", "AVG(uniform)")
+        val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
+        val slaqIntervalMs = conf.get("spark.slaq.intervalMs", "5000").toLong
+        if (slaqEnabled) {
+          PoolReweighterLoss.register(poolName)
+          PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt)
+        }
         val sqlContext = SQLContext.getOrCreate(sc)
         val df = sqlContext.read.json(inputPath)
         // Repartition on the underlying RDD

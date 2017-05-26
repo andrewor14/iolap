@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.hive.online
 
+import org.apache.spark.PoolReweighterLoss
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.catalyst.rules.{RuleExecutor, Rule}
 import org.apache.spark.sql.execution.joins.{SortMergeJoin, ShuffledHashJoin, BroadcastHashJoin}
@@ -98,8 +99,17 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
     var rows: Array[Row] = null
     do {
       rows = next().collect()
-    } while(!isValid)
-
+    } while (!isValid)
+    // If SLAQ is enabled, report confidence interval size to scheduler as loss
+    if (PoolReweighterLoss.hasRegisteredApplications) {
+      assert(rows.length == 1, "Wrong type of query")
+      val innerRow = rows(0).get(0).asInstanceOf[org.apache.spark.sql.Row]
+      val lower = innerRow.getDouble(1)
+      val upper = innerRow.getDouble(2)
+      assert(upper >= lower, s"upper bound $upper was not >= lower bound $lower")
+      val confidenceIntervalSize = upper - lower
+      PoolReweighterLoss.updateLoss(confidenceIntervalSize)
+    }
     rows
   }
 

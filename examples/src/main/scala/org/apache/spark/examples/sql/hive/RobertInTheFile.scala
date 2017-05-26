@@ -52,30 +52,37 @@ object RobertInTheFile {
     new Thread {
       override def run(): Unit = {
         val sc = SparkContext.getOrCreate()
+        val sqlContext = SQLContext.getOrCreate(sc)
         sc.setLocalProperty("spark.scheduler.pool", poolName)
-        // Some confs
+        sc.addSchedulablePool(poolName, 0, 1)
+        // Naga confs
         val conf = sc.getConf
         val numPartitions = conf.get("spark.naga.numPartitions", "100").toInt
-        val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
-        val outputPathSuffix = conf.get("spark.naga.outputPathSuffix", "output.dat")
-        val outputPath = s"$poolName.$outputPathSuffix"
         val selectArg = conf.get("spark.naga.selectArg", "AVG(uniform)")
+        val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
+        val outputDir = conf.get("spark.naga.outputDir", ".")
+        val outputSuffix = conf.get("spark.naga.outputSuffix", "")
+        val outputPath =
+          if (outputSuffix.nonEmpty) {
+            s"$outputDir/$poolName.$outputSuffix.dat"
+          } else {
+            s"$outputDir/$poolName.dat"
+          }
+        // Slaq conf
         val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
         val slaqIntervalMs = conf.get("spark.slaq.intervalMs", "5000").toLong
         if (slaqEnabled) {
           PoolReweighterLoss.register(poolName)
           PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt)
         }
-        val sqlContext = SQLContext.getOrCreate(sc)
-        val df = sqlContext.read.json(inputPath)
-        // Repartition on the underlying RDD
-        val newDF = sqlContext.createDataFrame(df.rdd.repartition(numPartitions), df.schema)
-        newDF.registerTempTable(poolName)
-        val odf = sqlContext.sql(s"SELECT $selectArg FROM $poolName").online
-        // DO NOT REMOVE THIS LINE!
-        odf.hasNext
-        val (_, numTotalBatches) = odf.progress
         // Run IOLAP
+        val df = sqlContext.read.json(inputPath)
+        sqlContext
+          .createDataFrame(df.rdd.repartition(numPartitions), df.schema)
+          .registerTempTable(poolName)
+        val odf = sqlContext.sql(s"SELECT $selectArg FROM $poolName").online
+        odf.hasNext // DO NOT REMOVE THIS LINE!
+        val (_, numTotalBatches) = odf.progress
         val result = (1 to numTotalBatches).map { _ => assert(odf.hasNext); odf.collectNext() }
         val resultString = result.zipWithIndex.map { case (r, i) =>
           val batchNumber = i + 1
@@ -84,19 +91,27 @@ object RobertInTheFile {
           val upper = r(0).get(0).asInstanceOf[Row].getDouble(2)
           s"$batchNumber $answer $lower $upper"
         }.mkString("\n")
-        // Print and write result to file
         println(
           "\n\n\n**************************************\n" +
           s"(data for '$poolName')\n" +
           resultString +
           "\n**************************************\n\n\n")
-        val writer = new PrintWriter(new File(outputPath))
-        try {
-          writer.write(resultString + "\n")
-        } finally {
-          writer.close()
-        }
+        ensureDirExists(outputDir)
+        writeToFile(resultString, outputPath)
       }
+    }
+  }
+
+  private def ensureDirExists(path: String): Unit = {
+    new File(path).mkdirs()
+  }
+
+  private def writeToFile(content: String, outputPath: String): Unit = {
+    val writer = new PrintWriter(new File(outputPath))
+    try {
+      writer.write(content + "\n")
+    } finally {
+      writer.close()
     }
   }
 

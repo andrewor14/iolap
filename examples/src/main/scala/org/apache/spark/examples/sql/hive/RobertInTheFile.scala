@@ -83,13 +83,14 @@ object RobertInTheFile {
         val odf = sqlContext.sql(s"SELECT $selectArg FROM $poolName").online
         odf.hasNext // DO NOT REMOVE THIS LINE!
         val (_, numTotalBatches) = odf.progress
-        val result = (1 to numTotalBatches).map { _ => assert(odf.hasNext); odf.collectNext() }
-        val resultString = result.zipWithIndex.map { case (r, i) =>
-          val batchNumber = i + 1
+        val resultString = (1 to numTotalBatches).map { _ =>
+          assert(odf.hasNext)
+          val r = odf.collectNext()
+          val currentTime = System.currentTimeMillis()
           val answer = r(0).get(0).asInstanceOf[Row].getDouble(0)
           val lower = r(0).get(0).asInstanceOf[Row].getDouble(1)
           val upper = r(0).get(0).asInstanceOf[Row].getDouble(2)
-          s"$batchNumber $answer $lower $upper"
+          s"$currentTime $answer $lower $upper"
         }.mkString("\n")
         println(
           "\n\n\n**************************************\n" +

@@ -47,8 +47,9 @@ object PoolReweighterLoss extends Logging {
   var batchTime = 0
   var isFair = false
   @volatile var isRunning = false
+  private var thread: Thread = null
 
-  def hasRegisteredApplications: Boolean = batchWindows.nonEmpty
+  def hasRegisteredApplications: Boolean = pool2numCores.nonEmpty
 
   def updateLoss(loss: Double): Unit = {
     val poolName = SparkContext.getOrCreate.getLocalProperty("spark.scheduler.pool")
@@ -70,13 +71,23 @@ object PoolReweighterLoss extends Logging {
     pool2numCores.remove(poolName)
   }
 
+  def stop(): Unit = {
+    if (thread == null) {
+      throw new IllegalStateException("Pool reweighter hasn't started yet")
+    }
+    thread.interrupt()
+  }
+
   // set batch to every t seconds
   def start(t: Int = 10, fair: Boolean = false): Unit = {
+    if (thread != null) {
+      throw new IllegalStateException("Pool reweighter already started")
+    }
     SparkContext.getOrCreate.addSparkListener(listener)
     isFair = fair
     batchTime = t
     isRunning = true
-    val thread = new Thread {
+    thread = new Thread {
       override def run(): Unit = {
         while (isRunning) {
           Thread.sleep(1000L * t)
@@ -105,6 +116,9 @@ object PoolReweighterLoss extends Logging {
 
 
   private[PoolReweighterLoss] def batchUpdate(): Unit = {
+    if (pool2numCores.isEmpty) {
+      return
+    }
     val totalCores = SparkContext.getOrCreate().defaultParallelism
     def diff(t: (String, Double)) = t._2
     val heap = new mutable.PriorityQueue[(String, Double)]()(Ordering.by(diff))
@@ -175,7 +189,7 @@ object PoolReweighterLoss extends Logging {
       tokens(poolName) = numCores * batchTime * 1000
       weights += "\n"
     }
-    logInfo(s"LOGAN weights:\n $weights")
+    // logInfo(s"LOGAN weights:\n $weights")
     if (isFair) {
       // fair share:
       for ((poolName: String, numCores: Int) <- pool2numCores) {

@@ -3,10 +3,13 @@
 import matplotlib.pyplot as plt
 from os import makedirs
 from os.path import exists
-
-name = "slaq_10pools_500bootstrap"
+import sys
 
 def main():
+  name = "slaq_10pools_500bootstrap"
+  args = sys.argv
+  if len(args) == 2:
+    name = args[1]
   (iters, values, lower, upper) = read_dat(name)
 
   # Make plotting dir if it doesn't already exist

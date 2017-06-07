@@ -4,9 +4,7 @@ import matplotlib.pyplot as plt
 from bisect import bisect_left
 from os import listdir, makedirs
 from os.path import exists, join
-
-fair_name = "fair_10pools_500bootstrap"
-slaq_name = "slaq_10pools_500bootstrap"
+import sys
 
 def read_files(paths):
   '''
@@ -51,6 +49,15 @@ def average_loss(times, losses):
   return (all_times, all_avg_losses)
 
 def main():
+  slaq_name = "slaq_10pools_500bootstrap"
+  fair_name = "fair_10pools_500bootstrap"
+  args = sys.argv
+  if len(args) == 2:
+    print "ERROR: Expected either two arguments or no arguments"
+    sys.exit(1)
+  if len(args) == 3:
+    slaq_name = args[1]
+    fair_name = args[2]
   slaq_dir = "../data/%s" % slaq_name
   fair_dir = "../data/%s" % fair_name
   slaq_files = [join(slaq_dir, f) for f in listdir(slaq_dir) if f.endswith(".dat")]

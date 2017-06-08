@@ -141,7 +141,7 @@ object PoolReweighterLoss extends Logging {
       }
     }
     // var halfCores = totalCores / 2
-    while(remainingCores > 0) {
+    while (remainingCores > 0 && heap.nonEmpty) {
       val head = heap.dequeue()
       val poolName = head._1
       val alloc = pool2numCores(poolName) + 1

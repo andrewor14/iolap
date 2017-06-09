@@ -101,7 +101,7 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
       rows = next().collect()
     } while (!isValid)
     // If SLAQ is enabled, report confidence interval size to scheduler as loss
-    if (PoolReweighterLoss.hasRegisteredApplications) {
+    if (PoolReweighterLoss.hasRegisteredPools) {
       assert(rows.length == 1, "Wrong type of query")
       val innerRow = rows(0).get(0).asInstanceOf[org.apache.spark.sql.Row]
       val lower = innerRow.getDouble(1)

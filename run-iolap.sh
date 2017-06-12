@@ -43,10 +43,10 @@ bin/spark-submit\
   --conf spark.slaq.intervalMs=5000\
   --conf spark.sql.online.number.bootstrap.trials="$BOOTSTRAP_TRIALS"\
   --conf spark.sql.online.streamed.relations="$STREAMED_RELATIONS"\
-  --conf spark.sql.online.number.batches=10\
+  --conf spark.sql.online.number.batches=100\
   --conf spark.naga.outputDir="$OUTPUT_DIR"\
   --conf spark.naga.intervalMs=5000\
-  --conf spark.naga.numPartitions=1000\
+  --conf spark.naga.numPartitions=8000\
   --class org.apache.spark.examples.sql.hive.RobertInTheFile\
   examples/target/scala-2.10/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar 2>&1 | tee "$LOG_FILE"
 set +x

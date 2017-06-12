@@ -44,17 +44,13 @@ object RobertInTheFile {
     // Slaq conf
     val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
     val slaqIntervalMs = conf.get("spark.slaq.intervalMs", "5000").toLong
-    if (slaqEnabled) {
-      PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt)
-    }
+    PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt, slaqEnabled)
     threads.foreach { t =>
       t.start()
       Thread.sleep(intervalMs)
     }
     threads.foreach(_.join())
-    if (slaqEnabled) {
-      PoolReweighterLoss.stop()
-    }
+    PoolReweighterLoss.stop()
   }
 
   private def makeThread(poolName: String): Thread = {
@@ -66,7 +62,7 @@ object RobertInTheFile {
         sc.addSchedulablePool(poolName, 0, 1)
         // Some confs
         val conf = sc.getConf
-        val numPartitions = conf.get("spark.naga.numPartitions", "100").toInt
+        val numPartitions = conf.get("spark.naga.numPartitions", "1000").toInt
         val selectArg = conf.get("spark.naga.selectArg", "AVG(uniform)")
         val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
         val outputDir = conf.get("spark.naga.outputDir", ".")
@@ -77,10 +73,7 @@ object RobertInTheFile {
           } else {
             s"$outputDir/$poolName.dat"
           }
-        val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
-        if (slaqEnabled) {
-          PoolReweighterLoss.register(poolName)
-        }
+        PoolReweighterLoss.register(poolName)
         // Run IOLAP
         val df = sqlContext.read.json(inputPath)
         sqlContext

@@ -20,7 +20,7 @@ package org.apache.spark.examples.sql.hive
 import java.io.{File, PrintWriter}
 
 import org.apache.spark.{PoolReweighterLoss, SparkConf, SparkContext}
-import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
@@ -31,7 +31,8 @@ object RobertInTheFile {
     val conf = new SparkConf
     val sc = SparkContext.getOrCreate(conf)
     val sqlContext = new HiveContext(sc)
-    // Some IOLAP confs
+    // Some confs
+    val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
     val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, "students")
     val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
     val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "100")
@@ -39,8 +40,9 @@ object RobertInTheFile {
     sqlContext.setConf(NUMBER_BATCHES, numBatches)
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)
     // Make some threads, one per streamed relation
+    val df = sqlContext.read.json(inputPath).cache()
     val intervalMs = conf.get("spark.naga.intervalMs", "5000").toLong
-    val threads = streamedRelations.split(",").map(makeThread)
+    val threads = streamedRelations.split(",").map { name => makeThread(name, df) }
     // Slaq conf
     val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
     val slaqIntervalMs = conf.get("spark.slaq.intervalMs", "5000").toLong
@@ -53,7 +55,7 @@ object RobertInTheFile {
     PoolReweighterLoss.stop()
   }
 
-  private def makeThread(poolName: String): Thread = {
+  private def makeThread(poolName: String, df: DataFrame): Thread = {
     new Thread {
       override def run(): Unit = {
         val sc = SparkContext.getOrCreate()
@@ -75,7 +77,6 @@ object RobertInTheFile {
           }
         PoolReweighterLoss.register(poolName)
         // Run IOLAP
-        val df = sqlContext.read.json(inputPath)
         sqlContext
           .createDataFrame(df.rdd.repartition(numPartitions), df.schema)
           .registerTempTable(poolName)

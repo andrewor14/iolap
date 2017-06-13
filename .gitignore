@@ -75,3 +75,5 @@ TempStatsStore/
 sql/hive-thriftserver/test_warehouses
 
 *output.dat
+data/students10.json
+

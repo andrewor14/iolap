@@ -47,6 +47,7 @@ bin/spark-submit\
   --conf spark.naga.outputDir="$OUTPUT_DIR"\
   --conf spark.naga.intervalMs=5000\
   --conf spark.naga.numPartitions=8000\
+  --conf spark.naga.inputPath="data/students10.json"\
   --class org.apache.spark.examples.sql.hive.RobertInTheFile\
   examples/target/scala-2.10/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar 2>&1 | tee "$LOG_FILE"
 set +x

@@ -20,12 +20,6 @@ else
   exit 1
 fi
 
-# Construct comma delimited streamed relations, one for each pool
-STREAMED_RELATIONS="pool1"
-for i in $(seq 2 "$NUM_POOLS"); do
-  STREAMED_RELATIONS="$STREAMED_RELATIONS,pool$i"
-done
-
 # Set output path
 OUTPUT_DIR="data/$SCHEDULER_NAME"_"$NUM_POOLS"pools_"$BOOTSTRAP_TRIALS"bootstrap
 LOG_FILE="$OUTPUT_DIR/output.log"
@@ -42,11 +36,11 @@ bin/spark-submit\
   --conf spark.slaq.enabled="$USE_SLAQ"\
   --conf spark.slaq.intervalMs=5000\
   --conf spark.sql.online.number.bootstrap.trials="$BOOTSTRAP_TRIALS"\
-  --conf spark.sql.online.streamed.relations="$STREAMED_RELATIONS"\
   --conf spark.sql.online.number.batches=100\
   --conf spark.naga.outputDir="$OUTPUT_DIR"\
   --conf spark.naga.intervalMs=5000\
   --conf spark.naga.numPartitions=8000\
+  --conf spark.naga.numPools="$NUM_POOLS"\
   --conf spark.naga.inputPath="data/students10.json"\
   --class org.apache.spark.examples.sql.hive.RobertInTheFile\
   examples/target/scala-2.10/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar 2>&1 | tee "$LOG_FILE"

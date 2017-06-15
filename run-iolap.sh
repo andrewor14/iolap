@@ -38,7 +38,7 @@ bin/spark-submit\
   --conf spark.sql.online.number.bootstrap.trials="$BOOTSTRAP_TRIALS"\
   --conf spark.sql.online.number.batches=100\
   --conf spark.naga.outputDir="$OUTPUT_DIR"\
-  --conf spark.naga.intervalMs=5000\
+  --conf spark.naga.intervalMs=60000\
   --conf spark.naga.numPartitions=8000\
   --conf spark.naga.numPools="$NUM_POOLS"\
   --conf spark.naga.inputPath="data/students10.json"\

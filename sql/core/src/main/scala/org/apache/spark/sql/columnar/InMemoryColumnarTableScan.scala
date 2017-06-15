@@ -210,6 +210,7 @@ private[sql] case class InMemoryColumnarTableScan(
         case e: Attribute => lookup.getOrElse(e, e)
         case e => e
       }
+    case part: Partitioning => part
   }
 
   override def outputOrdering: Seq[SortOrder] = relation.child.outputOrdering.map {
@@ -219,6 +220,7 @@ private[sql] case class InMemoryColumnarTableScan(
         case e: Attribute => lookup.getOrElse(e, e)
         case e => e
       }
+    case sortOrder: SortOrder => sortOrder
   }
 
   private def statsFor(a: Attribute) = relation.partitionStatistics.forAttribute(a)

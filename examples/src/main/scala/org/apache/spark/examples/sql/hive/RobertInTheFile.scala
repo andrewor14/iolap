@@ -54,7 +54,7 @@ object RobertInTheFile {
     // Slaq conf
     val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
     val slaqIntervalMs = conf.get("spark.slaq.intervalMs", "5000").toLong
-    PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt, slaqEnabled)
+    PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt, fair = !slaqEnabled)
     threads.foreach { t =>
       t.start()
       Thread.sleep(intervalMs)

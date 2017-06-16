@@ -48,8 +48,8 @@ object RobertInTheFile {
     sqlContext
       .createDataFrame(df.rdd.repartition(numPartitions), df.schema)
       .registerTempTable(tableName)
-    sqlContext.cacheTable(tableName)
-    sqlContext.table(tableName).count() // materialize
+    // sqlContext.cacheTable(tableName)
+    // sqlContext.table(tableName).count() // materialize
     val threads = (1 to numPools).map(makeThread)
     // Slaq conf
     val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean

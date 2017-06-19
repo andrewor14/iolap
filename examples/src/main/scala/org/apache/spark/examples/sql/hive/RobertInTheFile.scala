@@ -37,6 +37,7 @@ object RobertInTheFile {
     val intervalMs = conf.get("spark.naga.intervalMs", "5000").toLong
     val numPartitions = conf.get("spark.naga.numPartitions", "1000").toInt
     val numPools = conf.get("spark.naga.numPools", "10").toInt
+    val cacheInput = conf.get("spark.naga.cacheInput", "false").toBoolean
     val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, tableName)
     val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
     val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "100")
@@ -48,8 +49,10 @@ object RobertInTheFile {
     sqlContext
       .createDataFrame(df.rdd.repartition(numPartitions), df.schema)
       .registerTempTable(tableName)
-    // sqlContext.cacheTable(tableName)
-    // sqlContext.table(tableName).count() // materialize
+    if (cacheInput) {
+      sqlContext.cacheTable(tableName)
+      sqlContext.table(tableName).count() // materialize
+    }
     val threads = (1 to numPools).map(makeThread)
     // Slaq conf
     val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean

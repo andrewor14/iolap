@@ -14,6 +14,7 @@ NUM_PARTS=8000
 SLAQ_INTERVAL_MS=5000
 NAGA_INTERVAL_MS=10000
 INPUT_PATH="data/students10.json"
+INPUT_NAME="$(echo "$INPUT_PATH" | sed 's/data\/\(.*\)\.json/\1/g')"
 
 # Set scheduler name
 SCHEDULER_NAME=""
@@ -27,7 +28,7 @@ else
 fi
 
 # Set output path
-OUTPUT_DIR="data/$SCHEDULER_NAME"_"$NUM_POOLS"pools_"$BOOTSTRAP_TRIALS"bootstrap
+OUTPUT_DIR="data/$SCHEDULER_NAME"_"$NUM_POOLS"pools_"$BOOTSTRAP_TRIALS"bootstrap_"$INPUT_NAME"
 LOG_FILE="$OUTPUT_DIR/output.log"
 mkdir -p "$OUTPUT_DIR"
 rm -rf "$OUTPUT_DIR/*"

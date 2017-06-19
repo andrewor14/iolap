@@ -6,7 +6,7 @@ from os.path import exists
 import sys
 
 def main():
-  name = "slaq_10pools_500bootstrap"
+  name = "slaq_10pools_500bootstrap_students"
   args = sys.argv
   if len(args) == 2:
     name = args[1]
@@ -27,6 +27,7 @@ def main():
   ax.set_xlabel("Iteration")
   ax.set_ylabel("Answer")
   ax.legend()
+  ax.set_title(name)
   plt.savefig("%s/answers.png" % name)
   # Plot interval size
   interval_size = [upper[i] - lower[i] for i in range(len(lower))]
@@ -36,6 +37,7 @@ def main():
   ax.set_xlabel("Iteration")
   ax.set_ylabel("Confidence Interval Size")
   ax.legend()
+  ax.set_title(name)
   plt.savefig("%s/loss.png" % name)
  
 def read_dat(name):

@@ -49,15 +49,14 @@ def average_loss(times, losses):
   return (all_times, all_avg_losses)
 
 def main():
-  slaq_name = "slaq_10pools_500bootstrap"
-  fair_name = "fair_10pools_500bootstrap"
+  slaq_name = "slaq_10pools_500bootstrap_students"
   args = sys.argv
-  if len(args) == 2:
-    print "ERROR: Expected either two arguments or no arguments"
+  if len(args) > 2:
+    print "ERROR: Expected zero or one argument"
     sys.exit(1)
-  if len(args) == 3:
+  if len(args) == 2:
     slaq_name = args[1]
-    fair_name = args[2]
+  fair_name = slaq_name.replace("slaq", "fair")
   slaq_dir = "../data/%s" % slaq_name
   fair_dir = "../data/%s" % fair_name
   slaq_files = [join(slaq_dir, f) for f in listdir(slaq_dir) if f.endswith(".dat")]
@@ -77,6 +76,7 @@ def main():
   ax.set_xlabel("Time (s)")
   ax.set_ylabel("Loss")
   ax.legend(loc = "upper right")
+  ax.set_title(slaq_name)
   plt.savefig("%s/concurrent_loss.png" % slaq_name)
 
   # Plot deltas
@@ -92,6 +92,7 @@ def main():
   ax.set_xlabel("Time (s)")
   ax.set_ylabel("Normalized delta loss")
   ax.legend(loc = "upper right")
+  ax.set_title(slaq_name)
   plt.savefig("%s/concurrent_delta_loss.png" % slaq_name)
 
   # Plot average overall loss
@@ -104,6 +105,7 @@ def main():
   ax.set_xlabel("Time (s)")
   ax.set_ylabel("Loss")
   ax.legend(loc = "upper right")
+  ax.set_title(slaq_name)
   plt.savefig("%s/concurrent_avg_loss.png" % slaq_name)
 
 if __name__ == '__main__':

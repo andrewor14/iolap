@@ -14,7 +14,7 @@ NUM_PARTS=8000
 SLAQ_INTERVAL_MS=5000
 NAGA_INTERVAL_MS=10000
 CACHE_INPUT=false
-INPUT_PATH="data/students.json"
+INPUT_PATH="data/students1g.json"
 INPUT_NAME="$(echo "$INPUT_PATH" | sed 's/data\/\(.*\)\.json/\1/g')"
 
 # Set scheduler name

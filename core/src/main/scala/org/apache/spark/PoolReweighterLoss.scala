@@ -101,6 +101,7 @@ object PoolReweighterLoss extends Logging {
         while (isRunning) {
           Thread.sleep(batchIntervalMs)
           assignTokens()
+          printTokens()
         }
       }
     }
@@ -186,6 +187,21 @@ object PoolReweighterLoss extends Logging {
       }
     }
 
+  }
+
+  /**
+   * Print number of tokens assigned to each pool.
+   */
+  private def printTokens(): Unit = {
+    if (tokens.nonEmpty) {
+      val hashes = "##########################################################"
+      val timeString = s"Time = ${System.currentTimeMillis()}"
+      val tokenString = tokens.toArray
+        .sortBy { case (poolName, _) => poolName }
+        .map { case (poolName, numTokens) => s"$poolName = $numTokens" }
+        .mkString("\n")
+      println(s"\n\n\n$hashes\n$timeString\n$tokenString\n$hashes\n\n\n")
+    }
   }
 
   /**

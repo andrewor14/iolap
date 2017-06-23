@@ -92,6 +92,10 @@ object PoolReweighterLoss extends Logging {
    * This must be called before [[register]].
    */
   def start(t: Int = 10, fair: Boolean = false): Unit = {
+    // Fail fast against wrong scheduling mode, otherwise token accounting would be incorrect
+    if (sc.taskScheduler.rootPool.schedulingMode != SchedulingMode.FAIR) {
+      throw new IllegalStateException("Please set 'spark.scheduler.mode' to 'FAIR'!")
+    }
     sc.addSparkListener(listener)
     isFair = fair
     batchIntervalMs = t * 1000

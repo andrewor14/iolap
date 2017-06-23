@@ -41,6 +41,7 @@ bin/spark-submit\
   --master local[*]\
   --driver-memory 40g\
   --executor-memory 40g\
+  --conf spark.scheduler.mode="FAIR"\
   --conf spark.slaq.enabled="$USE_SLAQ"\
   --conf spark.slaq.intervalMs="$SLAQ_INTERVAL_MS"\
   --conf spark.sql.online.number.bootstrap.trials="$BOOTSTRAP_TRIALS"\

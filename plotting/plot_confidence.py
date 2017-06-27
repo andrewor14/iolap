@@ -10,6 +10,9 @@ def main():
   args = sys.argv
   if len(args) == 2:
     name = args[1]
+  plot(name)
+
+def plot(name):
   (iters, values, lower, upper) = read_dat(name)
 
   # Make plotting dir if it doesn't already exist

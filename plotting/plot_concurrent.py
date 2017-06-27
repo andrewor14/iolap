@@ -56,6 +56,9 @@ def main():
     sys.exit(1)
   if len(args) == 2:
     slaq_name = args[1]
+  plot(slaq_name)
+
+def plot(slaq_name):
   fair_name = slaq_name.replace("slaq", "fair")
   slaq_dir = "../data/%s" % slaq_name
   fair_dir = "../data/%s" % fair_name

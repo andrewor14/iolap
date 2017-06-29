@@ -18,11 +18,13 @@
 package org.apache.spark.sql.hive.online.joins
 
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.{Expression, Row}
-import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnspecifiedDistribution}
-import org.apache.spark.sql.execution.joins.{BroadcastHashJoin, BuildSide, HashJoin, HashedRelation}
+import org.apache.spark.sql.catalyst.plans.physical.{Distribution, Partitioning, UnspecifiedDistribution}
+import org.apache.spark.sql.execution.joins._
 import org.apache.spark.sql.execution.{BinaryNode, SparkPlan}
 import org.apache.spark.sql.hive.online.{OTStateful, OnlineDataFrame, OpId}
+import org.apache.spark.sql.metric.SQLMetrics
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -41,9 +43,14 @@ case class OTBroadcastHashJoin(
     opId: OpId = OpId.newOpId)
   extends BinaryNode with HashJoin with OTStateful {
 
+  override private[sql] lazy val metrics = Map(
+    "numLeftRows" -> SQLMetrics.createLongMetric(sparkContext, "number of left rows"),
+    "numRightRows" -> SQLMetrics.createLongMetric(sparkContext, "number of right rows"),
+    "numOutputRows" -> SQLMetrics.createLongMetric(sparkContext, "number of output rows"))
+
   override def outputPartitioning: Partitioning = streamedPlan.outputPartitioning
 
-  override def requiredChildDistribution =
+  override def requiredChildDistribution: Seq[Distribution] =
     UnspecifiedDistribution :: UnspecifiedDistribution :: Nil
 
   val timeout = {
@@ -59,9 +66,9 @@ case class OTBroadcastHashJoin(
   private lazy val broadcastFuture = future {
     prevBatch match {
       case None =>
-        // Note that we use .execute().collect() because we don't want to convert data to Scala types
         val input: Array[Row] = buildPlan.execute().map(_.copy()).collect()
-        val hashed = HashedRelation(input.iterator, buildSideKeyGenerator, input.length)
+        val hashed = HashedRelation(
+          input.iterator, SQLMetrics.nullLongMetric, buildSideKeyGenerator, input.length)
         val broadcast = sparkContext.broadcast(hashed)
         controller.broadcasts((opId, currentBatch)) = broadcast
         broadcast
@@ -70,17 +77,22 @@ case class OTBroadcastHashJoin(
     }
   }(BroadcastHashJoin.broadcastHashJoinExecutionContext)
 
-  override def doExecute() = {
+  override def doExecute(): RDD[Row] = {
+    val numStreamedRows = buildSide match {
+      case BuildLeft => longMetric("numRightRows")
+      case BuildRight => longMetric("numLeftRows")
+    }
+    val numOutputRows = longMetric("numOutputRows")
     val broadcastRelation = Await.result(broadcastFuture, timeout)
 
     streamedPlan.execute().mapPartitions { streamedIter =>
-      hashJoin(streamedIter, broadcastRelation.value)
+      hashJoin(streamedIter, numStreamedRows, broadcastRelation.value, numOutputRows)
     }
   }
 
-  override protected final def otherCopyArgs = controller :: trace :: opId :: Nil
+  override protected final def otherCopyArgs: Seq[AnyRef] = controller :: trace :: opId :: Nil
 
-  override def simpleString = s"${super.simpleString} $opId"
+  override def simpleString: String = s"${super.simpleString} $opId"
 
   override def newBatch(newTrace: List[Int]): SparkPlan = {
     val join = OTBroadcastHashJoin(leftKeys, rightKeys, buildSide, left, right)(

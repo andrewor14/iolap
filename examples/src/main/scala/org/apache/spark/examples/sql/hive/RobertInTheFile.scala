@@ -22,6 +22,7 @@ import java.io.{File, PrintWriter}
 import org.apache.spark.{PoolReweighterLoss, SparkConf, SparkContext}
 import org.apache.spark.sql.{Row, SQLContext}
 import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.sql.hive.online.OnlineDataFrame
 import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 
@@ -32,11 +33,26 @@ object RobertInTheFile {
     val conf = new SparkConf
     val sc = SparkContext.getOrCreate(conf)
     val sqlContext = new HiveContext(sc)
-    // Some confs
-    val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
+    setup(sqlContext)
     val intervalMs = conf.get("spark.naga.intervalMs", "5000").toLong
-    val numPartitions = conf.get("spark.naga.numPartitions", "1000").toInt
     val numPools = conf.get("spark.naga.numPools", "10").toInt
+    val threads = (1 to numPools).map(makeThread)
+    // Slaq conf
+    val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
+    val slaqIntervalMs = conf.get("spark.slaq.intervalMs", "5000").toLong
+    PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt, fair = !slaqEnabled)
+    threads.foreach { t =>
+      t.start()
+      Thread.sleep(intervalMs)
+    }
+    threads.foreach(_.join())
+    PoolReweighterLoss.stop()
+  }
+
+  def setup(sqlContext: SQLContext): Unit = {
+    val conf = sqlContext.sparkContext.getConf
+    val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
+    val numPartitions = conf.get("spark.naga.numPartitions", "1000").toInt
     val cacheInput = conf.get("spark.naga.cacheInput", "false").toBoolean
     val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, tableName)
     val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
@@ -53,17 +69,12 @@ object RobertInTheFile {
       sqlContext.cacheTable(tableName)
       sqlContext.table(tableName).count() // materialize
     }
-    val threads = (1 to numPools).map(makeThread)
-    // Slaq conf
-    val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
-    val slaqIntervalMs = conf.get("spark.slaq.intervalMs", "5000").toLong
-    PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt, fair = !slaqEnabled)
-    threads.foreach { t =>
-      t.start()
-      Thread.sleep(intervalMs)
-    }
-    threads.foreach(_.join())
-    PoolReweighterLoss.stop()
+  }
+
+  def makeOnlineDF(sqlContext: SQLContext): OnlineDataFrame = {
+    val conf = sqlContext.sparkContext.getConf
+    val selectArg = conf.get("spark.naga.selectArg", "AVG(uniform)")
+    sqlContext.sql(s"SELECT $selectArg FROM $tableName").online
   }
 
   private def makeThread(poolNum: Int): Thread = {
@@ -76,9 +87,6 @@ object RobertInTheFile {
         sc.addSchedulablePool(poolName, 0, 1)
         // Some confs
         val conf = sc.getConf
-        val numPartitions = conf.get("spark.naga.numPartitions", "1000").toInt
-        val selectArg = conf.get("spark.naga.selectArg", "AVG(uniform)")
-        val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
         val outputDir = conf.get("spark.naga.outputDir", ".")
         val outputSuffix = conf.get("spark.naga.outputSuffix", "")
         val outputPath =
@@ -89,7 +97,7 @@ object RobertInTheFile {
           }
         PoolReweighterLoss.register(poolName)
         // Run IOLAP
-        val odf = sqlContext.sql(s"SELECT $selectArg FROM $tableName").online
+        val odf = makeOnlineDF(sqlContext)
         odf.hasNext // DO NOT REMOVE THIS LINE!
         val (_, numTotalBatches) = odf.progress
         val resultString = (1 to numTotalBatches).map { _ =>

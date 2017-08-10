@@ -33,6 +33,11 @@ import scala.collection.mutable
 import scala.util.Random
 
 class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
+  val nextTimes = new mutable.ArrayBuffer[Long]
+  val collectTimes = new mutable.ArrayBuffer[Long]
+  val transformTimes = new mutable.ArrayBuffer[Long]
+  val executeTimes = new mutable.ArrayBuffer[Long]
+
   private[this] val sqlContext = dataFrame.sqlContext
   private[this] val sparkContext = sqlContext.sparkContext
 
@@ -98,7 +103,18 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
   def collectNext(): Array[Row] = {
     var rows: Array[Row] = null
     do {
-      rows = next().collect()
+      val nextStart = System.nanoTime()
+      val df = next()
+      val nextEnd = System.nanoTime()
+      val collectStart = nextEnd
+      rows = df.collect()
+      val collectEnd = System.nanoTime()
+      val nextTimeMs = (nextEnd - nextStart) / 1000 / 1000
+      val collectTimeMs = (collectEnd - collectStart) / 1000 / 1000
+      nextTimes.append(nextTimeMs)
+      collectTimes.append(collectTimeMs)
+      logInfo(s"NAGA: next took ${nextTimeMs}ms")
+      logInfo(s"NAGA: collect took ${collectTimeMs}ms")
     } while (!isValid)
     // If SLAQ is enabled, report confidence interval size to scheduler as loss
     if (PoolReweighterLoss.hasRegisteredPools) {
@@ -113,7 +129,7 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
     rows
   }
 
-  private[spark] def next(): DataFrame = {
+  def next(): DataFrame = {
     batches.headOption match {
       case Some(bId) =>
         if (bId != watcher.value) {
@@ -128,29 +144,53 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
     }
     watcher = new Accumulator(batches.head, MinAccumulatorParam)
 
-    sqlContext.createDataFrame(generate(executedPlan, batches).execute(), schema)
+    val transformStart = System.nanoTime()
+    val transformed = generate(executedPlan, batches)
+    val transformEnd = System.nanoTime()
+    val executeStart = transformEnd
+    val rdd = transformed.execute()
+    val executeEnd = System.nanoTime()
+    val transformTimeMs = (transformEnd - transformStart) / 1000 / 1000
+    val executeTimeMs = (executeEnd - executeStart) / 1000 / 1000
+    transformTimes.append(transformTimeMs)
+    executeTimes.append(executeTimeMs)
+    logInfo(s"NAGA: transform took ${transformTimeMs}ms")
+    logInfo(s"NAGA: execute took ${executeTimeMs}ms")
+    sqlContext.createDataFrame(rdd, schema)
   }
 
   private[spark] def isValid: Boolean = batches.headOption.exists(_ == watcher.value)
 
   def cleanup(): Unit = cleanup(_ => true)
 
-  private[this] def generate(plan: SparkPlan, batches: List[Int]): SparkPlan = plan.transformUp {
-    case stateful: Stateful =>
-      stateful.transformAllExpressions {
-        case ScaleFactor(branches) => Literal(branches.map(_.scale).product)
-        case ApproxColumn(confidence, column, multiplicities, _)
-          if batches.headOption.forall(_ + 1 == activeNumBatches) =>
-          ApproxColumn(confidence, column, multiplicities, finalBatch = true)
-      }.newBatch(batches)
+  // TODO: rename this; we're not generating anything here...
+  private[this] def generate(plan: SparkPlan, batches: List[Int]): SparkPlan = {
+    val lastBatch = batches.headOption.forall(_ + 1 == activeNumBatches)
+    if (lastBatch) {
+      plan.transformUp {
+        case stateful: Stateful =>
+          stateful.transformAllExpressions {
+            // case ScaleFactor(branches) =>
+            //   Literal(branches.map(_.scale).product)
+            case ApproxColumn(confidence, column, multiplicities, _) =>
+              logInfo("NAGA: HEY GUYS I'M approx column last")
+              ApproxColumn(confidence, column, multiplicities, finalBatch = true)
+          }.newBatch(batches)
 
-    case other =>
-      other.transformAllExpressions {
-        case ScaleFactor(branches) => Literal(branches.map(_.scale).product)
-        case ApproxColumn(confidence, column, multiplicities, _)
-          if batches.headOption.forall(_ + 1 == activeNumBatches) =>
-          ApproxColumn(confidence, column, multiplicities, finalBatch = true)
+        case other =>
+          other.transformAllExpressions {
+            // case ScaleFactor(branches) =>
+            //   Literal(branches.map(_.scale).product)
+            case ApproxColumn(confidence, column, multiplicities, _) =>
+              ApproxColumn(confidence, column, multiplicities, finalBatch = true)
+          }
       }
+    } else {
+      plan.transformUp {
+        case stateful: Stateful =>
+          stateful.newBatch(batches)
+      }
+    }
   }
 
   private[this] def recompute(toRecompute: Seq[Int], index: Int): Unit = {

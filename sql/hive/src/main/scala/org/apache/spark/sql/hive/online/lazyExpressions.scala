@@ -278,8 +278,9 @@ case class ScaleFactor(branches: Seq[RelationReference]) extends LeafExpression 
   def nullable = false
   def dataType = DoubleType
 
-  override def eval(input: Row):Any =
-    throw new TreeNodeException(this, s"No function to evaluate expression. type: ${this.nodeName}")
+  override def eval(input: Row):Any = {
+    branches.map(_.scale).product.asInstanceOf[Any]
+  }
 
   override def toString = s"${branches.mkString("[", "*", "]")}"
 }

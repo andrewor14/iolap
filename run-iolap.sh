@@ -16,6 +16,7 @@ NAGA_INTERVAL_MS="${NAGA_INTERVAL_MS:-30000}"
 CACHE_INPUT="${CACHE_INPUT:-false}"
 INPUT_PATH="${INPUT_PATH:-data/students.json}"
 INPUT_NAME="$(echo "$INPUT_PATH" | sed 's/data\/\(.*\)\.json/\1/g')"
+PREPARE_DATAFRAMES="${PREPARE_DATAFRAMES:-false}"
 
 # Set scheduler name
 SCHEDULER_NAME=""
@@ -52,6 +53,7 @@ bin/spark-submit\
   --conf spark.naga.numPools="$NUM_POOLS"\
   --conf spark.naga.cacheInput="$CACHE_INPUT"\
   --conf spark.naga.inputPath="$INPUT_PATH"\
+  --conf spark.naga.prepareDataFrames="$PREPARE_DATAFRAMES"\
   --class org.apache.spark.examples.sql.hive.RobertInTheFile\
   examples/target/scala-2.10/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar 2>&1 | tee "$LOG_FILE"
 set +x

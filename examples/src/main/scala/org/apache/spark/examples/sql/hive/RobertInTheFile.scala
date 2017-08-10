@@ -89,6 +89,7 @@ object RobertInTheFile {
         val conf = sc.getConf
         val outputDir = conf.get("spark.naga.outputDir", ".")
         val outputSuffix = conf.get("spark.naga.outputSuffix", "")
+        val prepareDFs = conf.getBoolean("spark.naga.prepareDataFrames", false)
         val outputPath =
           if (outputSuffix.nonEmpty) {
             s"$outputDir/$poolName.$outputSuffix.dat"
@@ -99,6 +100,9 @@ object RobertInTheFile {
         // Run IOLAP
         val odf = makeOnlineDF(sqlContext)
         odf.hasNext // DO NOT REMOVE THIS LINE!
+        if (prepareDFs) {
+          odf.prepareDataFrames()
+        }
         val (_, numTotalBatches) = odf.progress
         val resultString = (1 to numTotalBatches).map { _ =>
           assert(odf.hasNext)

@@ -22,7 +22,6 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.catalyst.rules.{RuleExecutor, Rule}
 import org.apache.spark.sql.execution.joins.{SortMergeJoin, ShuffledHashJoin, BroadcastHashJoin}
 import org.apache.spark.sql.{KickOffBroadcast, Row, DataFrame}
-import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.hive.online.OnlineDataFrame._
 import org.apache.spark.sql.types.StructType
@@ -37,6 +36,9 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
   val collectTimes = new mutable.ArrayBuffer[Long]
   val transformTimes = new mutable.ArrayBuffer[Long]
   val executeTimes = new mutable.ArrayBuffer[Long]
+
+  // Queue of DataFrames left to run; calls to collectNext() will drain from this queue
+  val dataFrameQueue = new mutable.Queue[DataFrame]
 
   private[this] val sqlContext = dataFrame.sqlContext
   private[this] val sparkContext = sqlContext.sparkContext
@@ -102,20 +104,32 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
 
   def collectNext(): Array[Row] = {
     var rows: Array[Row] = null
-    do {
-      val nextStart = System.nanoTime()
-      val df = next()
-      val nextEnd = System.nanoTime()
-      val collectStart = nextEnd
+    // First check the queue; if it has something, just collect from the queue
+    // Otherwise, if the queue is empty, build your own DataFrame and collect from it
+    if (dataFrameQueue.nonEmpty) {
+      val df = dataFrameQueue.dequeue()
+      val collectStart = System.nanoTime()
       rows = df.collect()
       val collectEnd = System.nanoTime()
-      val nextTimeMs = (nextEnd - nextStart) / 1000 / 1000
       val collectTimeMs = (collectEnd - collectStart) / 1000 / 1000
-      nextTimes.append(nextTimeMs)
       collectTimes.append(collectTimeMs)
-      logInfo(s"NAGA: next took ${nextTimeMs}ms")
       logInfo(s"NAGA: collect took ${collectTimeMs}ms")
-    } while (!isValid)
+    } else {
+      do {
+        val nextStart = System.nanoTime()
+        val df = next()
+        val nextEnd = System.nanoTime()
+        val collectStart = nextEnd
+        rows = df.collect()
+        val collectEnd = System.nanoTime()
+        val nextTimeMs = (nextEnd - nextStart) / 1000 / 1000
+        val collectTimeMs = (collectEnd - collectStart) / 1000 / 1000
+        nextTimes.append(nextTimeMs)
+        collectTimes.append(collectTimeMs)
+        logInfo(s"NAGA: next took ${nextTimeMs}ms")
+        logInfo(s"NAGA: collect took ${collectTimeMs}ms")
+      } while (!isValid)
+    }
     // If SLAQ is enabled, report confidence interval size to scheduler as loss
     if (PoolReweighterLoss.hasRegisteredPools) {
       assert(rows.length == 1, "Wrong type of query")
@@ -143,9 +157,15 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
         batches = 0 :: batches
     }
     watcher = new Accumulator(batches.head, MinAccumulatorParam)
+    makeDataFrame(batches)
+  }
 
+  /**
+   * Make a [[DataFrame]] for the batch specified by the list of batch numbers.
+   */
+  private def makeDataFrame(batchNums: List[Int]): DataFrame = {
     val transformStart = System.nanoTime()
-    val transformed = generate(executedPlan, batches)
+    val transformed = generate(executedPlan, batchNums)
     val transformEnd = System.nanoTime()
     val executeStart = transformEnd
     val rdd = transformed.execute()
@@ -157,6 +177,20 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
     logInfo(s"NAGA: transform took ${transformTimeMs}ms")
     logInfo(s"NAGA: execute took ${executeTimeMs}ms")
     sqlContext.createDataFrame(rdd, schema)
+  }
+
+  /**
+   * Prepare all DataFrames in advance and put them in the queue from which
+   * [[collectNext]] drains.
+   */
+  def prepareDataFrames(): Unit = {
+    hasNext // DO NOT REMOVE THIS LINE
+    val (_, numBatches) = progress
+    (1 to numBatches).foreach { batchNum =>
+      val myBatches = (0 until batchNum).reverse.toList
+      val df = makeDataFrame(myBatches)
+      dataFrameQueue.enqueue(df)
+    }
   }
 
   private[spark] def isValid: Boolean = batches.headOption.exists(_ == watcher.value)

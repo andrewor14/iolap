@@ -79,10 +79,15 @@ object RobertInTheFile {
 
   private def makeThread(poolNum: Int): Thread = {
     new Thread {
-      override def run(): Unit = {
+      private val poolName = "pool" + poolNum
+      private var odf: OnlineDataFrame = _
+      private var outputPath: String = _
+
+      setup()
+
+      private def setup(): Unit = {
         val sc = SparkContext.getOrCreate()
         val sqlContext = SQLContext.getOrCreate(sc)
-        val poolName = "pool" + poolNum
         sc.setLocalProperty("spark.scheduler.pool", poolName)
         sc.addSchedulablePool(poolName, 0, 1)
         // Some confs
@@ -90,19 +95,25 @@ object RobertInTheFile {
         val outputDir = conf.get("spark.naga.outputDir", ".")
         val outputSuffix = conf.get("spark.naga.outputSuffix", "")
         val prepareDFs = conf.getBoolean("spark.naga.prepareDataFrames", false)
-        val outputPath =
+        val _outputPath =
           if (outputSuffix.nonEmpty) {
             s"$outputDir/$poolName.$outputSuffix.dat"
           } else {
             s"$outputDir/$poolName.dat"
           }
+        ensureDirExists(outputDir)
         PoolReweighterLoss.register(poolName)
         // Run IOLAP
-        val odf = makeOnlineDF(sqlContext)
-        odf.hasNext // DO NOT REMOVE THIS LINE!
+        val _odf = makeOnlineDF(sqlContext)
+        _odf.hasNext // DO NOT REMOVE THIS LINE!
         if (prepareDFs) {
-          odf.prepareDataFrames()
+          _odf.prepareDataFrames()
         }
+        odf = _odf
+        outputPath = _outputPath
+      }
+
+      override def run(): Unit = {
         val (_, numTotalBatches) = odf.progress
         val resultString = (1 to numTotalBatches).map { _ =>
           assert(odf.hasNext)
@@ -118,7 +129,6 @@ object RobertInTheFile {
           s"(data for '$poolName')\n" +
           resultString +
           "\n**************************************\n\n\n")
-        ensureDirExists(outputDir)
         writeToFile(resultString, outputPath)
       }
     }

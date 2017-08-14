@@ -6,7 +6,7 @@ import plot_confidence
 import plot_concurrent
 
 data_dir = "../data"
-files = [f for f in listdir(data_dir) if f.startswith("slaq") and not exists(f)]
+files = [f for f in listdir(data_dir) if f.startswith("slaq")]
 
 for f in files:
   print "Plotting experiment '%s'" % f

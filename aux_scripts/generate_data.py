@@ -3,14 +3,19 @@
 import random, json, string
 import csv
 from numpy import random as nrand
+import os
 import sys
-GB = 0.1
+
+GB = 10
 count = int(1.1163*(2**22) * GB)
 fields = ["name", "index", "coin_toss", "normal", "zipf", "uniform", 
           "twin_peak", "geometric", "exponential", "lognormal", "zero"]
-with open("../data/students.json", "w") as fp:
+path = "../data/students.json"
+abs_path = os.path.abspath(path)
+with open(abs_path, "w") as fp:
     #writer = csv.writer(fp)
     #writer.writerow(fields)
+    print "Writing to %s..." % abs_path
     for i  in range(count):
         if i % int(count/20) == 0:
             print "{0:.0f}%... ".format(float(i)/count * 100),

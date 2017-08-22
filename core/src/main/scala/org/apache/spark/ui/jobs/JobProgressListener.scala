@@ -357,7 +357,8 @@ class JobProgressListener(conf: SparkConf) extends SparkListener with Logging {
       })
 
       for (accumulableInfo <- info.accumulables) {
-        stageData.accumulables(accumulableInfo.id) = accumulableInfo
+        if (accumulableInfo != null)
+            stageData.accumulables(accumulableInfo.id) = accumulableInfo
       }
 
       val execSummaryMap = stageData.executorSummary

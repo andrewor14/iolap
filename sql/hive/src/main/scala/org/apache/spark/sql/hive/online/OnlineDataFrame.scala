@@ -70,6 +70,7 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
   def registerRelation(ref: RelationReference): Unit = {
     val batchSize = numBatches.map(n => math.max(ref.numParts / n, 1))
       .getOrElse(math.ceil(numSlots * numWavesPerBatch).toInt)
+    Random.setSeed(0L)
     val partitions = Random.shuffle((0 until ref.numParts).toIndexedSeq)
       .grouped(batchSize).map(_.toSet).toBuffer
     relation2Batches(ref) = partitions

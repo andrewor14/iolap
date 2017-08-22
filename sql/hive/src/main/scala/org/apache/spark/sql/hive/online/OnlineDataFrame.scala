@@ -139,7 +139,7 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
       val upper = innerRow.getDouble(2)
       assert(upper >= lower, s"upper bound $upper was not >= lower bound $lower")
       val confidenceIntervalSize = upper - lower
-      PoolReweighterLoss.updateLoss(confidenceIntervalSize)
+      PoolReweighterLoss.updateLoss(confidenceIntervalSize * 1000)
     }
     rows
   }

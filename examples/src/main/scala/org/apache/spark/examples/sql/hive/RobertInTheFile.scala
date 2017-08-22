@@ -89,7 +89,7 @@ object RobertInTheFile {
         val sc = SparkContext.getOrCreate()
         val sqlContext = SQLContext.getOrCreate(sc)
         sc.setLocalProperty("spark.scheduler.pool", poolName)
-        sc.addSchedulablePool(poolName, 0, 1)
+        sc.addSchedulablePool(poolName, 0, 10 * 1000 * 1000)
         // Some confs
         val conf = sc.getConf
         val outputDir = conf.get("spark.naga.outputDir", ".")

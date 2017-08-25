@@ -40,13 +40,32 @@ object RobertInTheFile {
     // Slaq conf
     val slaqEnabled = conf.get("spark.slaq.enabled", "true").toBoolean
     val slaqIntervalMs = conf.get("spark.slaq.intervalMs", "5000").toLong
-    PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt, fair = !slaqEnabled)
+    val monitorIntervalMs = 5000
+    // PoolReweighterLoss.start((slaqIntervalMs / 1000).toInt, fair = !slaqEnabled)
+    @volatile var keepRunning = true
+    val monitorThread = new Thread {
+      override def run(): Unit = {
+        while (keepRunning) {
+          val lines = sc.getAllPools.map { p =>
+            val name = p.name
+            s"$name = ${sc.getPoolWeight(name)}"
+          }
+          println("\n\n\n########################################\n" +
+            "POOL WEIGHTS:\n" +
+            lines.mkString("\n") + "\n" +
+            "\n########################################\n\n\n")
+          Thread.sleep(monitorIntervalMs)
+        }
+      }
+    }
+    monitorThread.start()
     threads.foreach { t =>
       t.start()
       Thread.sleep(intervalMs)
     }
     threads.foreach(_.join())
-    PoolReweighterLoss.stop()
+    keepRunning = false
+    // PoolReweighterLoss.stop()
   }
 
   def setup(sqlContext: SQLContext): Unit = {
@@ -88,8 +107,15 @@ object RobertInTheFile {
       private def setup(): Unit = {
         val sc = SparkContext.getOrCreate()
         val sqlContext = SQLContext.getOrCreate(sc)
+        val slaqEnabled = sc.conf.get("spark.slaq.enabled", "true").toBoolean
         sc.setLocalProperty("spark.scheduler.pool", poolName)
         sc.addSchedulablePool(poolName, 0, 10 * 1000 * 1000)
+        // If this is fair share, well, do fair share!
+        if (!slaqEnabled) {
+          sc.getAllPools.foreach { p =>
+            sc.setPoolWeight(p.name, 1000)
+          }
+        }
         // Some confs
         val conf = sc.getConf
         val outputDir = conf.get("spark.naga.outputDir", ".")
@@ -102,7 +128,7 @@ object RobertInTheFile {
             s"$outputDir/$poolName.dat"
           }
         ensureDirExists(outputDir)
-        PoolReweighterLoss.register(poolName)
+        // PoolReweighterLoss.register(poolName)
         // Run IOLAP
         val _odf = makeOnlineDF(sqlContext)
         _odf.hasNext // DO NOT REMOVE THIS LINE!

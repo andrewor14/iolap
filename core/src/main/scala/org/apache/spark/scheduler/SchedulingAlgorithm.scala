@@ -44,7 +44,6 @@ private[spark] class FIFOSchedulingAlgorithm extends SchedulingAlgorithm {
 
 private[spark] class FairSchedulingAlgorithm extends SchedulingAlgorithm {
   override def comparator(s1: Schedulable, s2: Schedulable): Boolean = {
-    /*
     val minShare1 = s1.minShare
     val minShare2 = s2.minShare
     val runningTasks1 = s1.runningTasks
@@ -73,7 +72,7 @@ private[spark] class FairSchedulingAlgorithm extends SchedulingAlgorithm {
     } else {
       s1.name < s2.name
     }
-    */
+    /*
     val poolName1 = s1.name
     val poolName2 = s2.name
     if (!PoolReweighterLoss.tokens.contains(poolName1)) {
@@ -89,5 +88,6 @@ private[spark] class FairSchedulingAlgorithm extends SchedulingAlgorithm {
         false
       }
     }
+    */
   }
 }

@@ -132,14 +132,18 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
       } while (!isValid)
     }
     // If SLAQ is enabled, report confidence interval size to scheduler as loss
-    if (PoolReweighterLoss.hasRegisteredPools) {
+    // if (PoolReweighterLoss.hasRegisteredPools) {
+    val slaqEnabled = sparkContext.conf.get("spark.slaq.enabled", "true").toBoolean
+    if (slaqEnabled) {
       assert(rows.length == 1, "Wrong type of query")
       val innerRow = rows(0).get(0).asInstanceOf[org.apache.spark.sql.Row]
       val lower = innerRow.getDouble(1)
       val upper = innerRow.getDouble(2)
       assert(upper >= lower, s"upper bound $upper was not >= lower bound $lower")
       val confidenceIntervalSize = upper - lower
-      PoolReweighterLoss.updateLoss(confidenceIntervalSize * 1000)
+      // PoolReweighterLoss.updateLoss(confidenceIntervalSize * 1000)
+      val poolName = sparkContext.getLocalProperty("spark.scheduler.pool")
+      sparkContext.setPoolWeight(poolName, confidenceIntervalSize.toInt * 1000)
     }
     rows
   }

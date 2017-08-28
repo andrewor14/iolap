@@ -143,7 +143,9 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
       val confidenceIntervalSize = upper - lower
       // PoolReweighterLoss.updateLoss(confidenceIntervalSize * 1000)
       val poolName = sparkContext.getLocalProperty("spark.scheduler.pool")
-      sparkContext.setPoolWeight(poolName, confidenceIntervalSize.toInt * 1000)
+      if (poolName != null) {
+        sparkContext.setPoolWeight(poolName, confidenceIntervalSize.toInt * 1000)
+      }
     }
     rows
   }

@@ -160,6 +160,7 @@ private[spark] class TaskSchedulerImpl(
       val manager = createTaskSetManager(taskSet, maxTaskFailures)
       activeTaskSets(taskSet.id) = manager
       schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties)
+      logInfo(s"LOGAN adding taskSet for ${manager.parent.poolName}")
 
       if (!isLocal && !hasReceivedTask) {
         starvationTimer.scheduleAtFixedRate(new TimerTask() {
@@ -230,12 +231,14 @@ private[spark] class TaskSchedulerImpl(
         try {
           for (task <- taskSet.resourceOffer(execId, host, maxLocality)) {
             val poolName = taskSet.parent.poolName
+            /*
             if (PoolReweighterLoss.listener.avgTaskTime.contains(poolName)) {
               val avgtt = PoolReweighterLoss.listener.avgTaskTime(poolName)._1 /
                 PoolReweighterLoss.listener.avgTaskTime(poolName)._2.toDouble
               PoolReweighterLoss.tokens(poolName) =
                 PoolReweighterLoss.tokens(poolName) - avgtt.toLong
-            }
+            }*/
+            logInfo(s"LOGAN: launching task for $poolName")
             tasks(i) += task
             val tid = task.taskId
             taskIdToTaskSetId(tid) = taskSet.taskSet.id

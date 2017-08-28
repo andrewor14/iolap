@@ -45,15 +45,12 @@ object TestIolap extends Logging {
           logInfo(s"LOGAN: $name $avg $loss")
           val isFair = sc.getConf.get("spark.slaq.isFair", "false").equals("true")
           if (!isFair) {
-            sc.setPoolWeight(name, (loss * 100000).toInt)
+            /*
+            if (loss == 0) sc.setPoolWeight(name, 0)
+            else sc.setPoolWeight(name, ((loss - 1.25) / (16.5-1.25) * 1000).toInt)
+            */
+            sc.setPoolWeight(name, loss.toInt)
           } else {
-/*
-            if (name.equals("t1")) {
-              sc.setPoolWeight(name, 1000)
-            } else {
-              sc.setPoolWeight(name, 1)
-            }
-*/
             sc.setPoolWeight(name, 1)
           }
         }
@@ -74,7 +71,7 @@ object TestIolap extends Logging {
 
 
     val numPartitions = sc.getConf.get("spark.slaq.numPartitions", "16000").toInt
-    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students10g.json")
+    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students1g.json")
     val df = sqlContext.read.json(inputFile)
     val newDF = sqlContext.createDataFrame(
       df.rdd.repartition(numPartitions), df.schema)

@@ -31,7 +31,7 @@ import org.apache.spark.{Accumulator, AccumulatorParam, SparkEnv}
 import scala.collection.mutable
 import scala.util.Random
 
-class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
+class OnlineDataFrame(val dataFrame: DataFrame) extends org.apache.spark.Logging {
   val nextTimes = new mutable.ArrayBuffer[Long]
   val collectTimes = new mutable.ArrayBuffer[Long]
   val transformTimes = new mutable.ArrayBuffer[Long]

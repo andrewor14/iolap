@@ -1110,7 +1110,7 @@ case class ImplementAggregate(slackParam: Double, controller: OnlineDataFrame)
             s"!!! Warning: unexpected growth mode ${getGrowthMode(aggregate)} " +
               s"in ${aggregate.simpleString}")
           AggregateWith2Inputs(getFlag(child.output), collectRefreshInfo(child.output),
-            partial, groupings, aggrs, child)(controller, opId = opId)
+            partial, groupings, child)(controller, opId = opId, aggregateExpressions = aggrs)
         } else {
           aggregate
         }
@@ -1120,7 +1120,7 @@ case class ImplementAggregate(slackParam: Double, controller: OnlineDataFrame)
             s"in ${aggregate.simpleString}")
         AggregateWith2Inputs2Outputs(getFlag(child.output), collectRefreshInfo(child.output),
           collectLineageRelay(aggregate.output), collectIntegrityInfo(aggrs, slackParam),
-          groupings, aggrs, child)(controller, -1 :: Nil, opId = opId)
+          groupings, child)(controller, -1 :: Nil, opId = opId, aggregateExpressions = aggrs)
       }
   }
 }

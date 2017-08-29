@@ -367,6 +367,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] {
              |Failed to copy node.
              |Is otherCopyArgs specified correctly for $nodeName.
              |Exception message: ${e.getMessage}
+             |Stack trace:\n${e.getStackTrace.mkString("\n\t\t")}
              |ctor: $defaultCtor?
              |args: ${newArgs.mkString(", ")}
            """.stripMargin)

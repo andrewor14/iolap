@@ -58,6 +58,7 @@ case class GeneratedAggregate(
       UnspecifiedDistribution :: Nil
     } else {
       if (groupingExpressions == Nil) {
+        println("GenAgg: AM I NIL?")
         AllTuples :: Nil
       } else {
         ClusteredDistribution(groupingExpressions) :: Nil

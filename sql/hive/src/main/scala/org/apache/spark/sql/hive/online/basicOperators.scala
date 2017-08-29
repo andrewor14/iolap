@@ -128,7 +128,7 @@ case class Collect(
   extends UnaryNode with IteratorRefresher with Stateful {
   override def output: Seq[Attribute] = projectList.map(_.toAttribute)
 
-  override def requiredChildDistribution = AllTuples :: Nil
+//  override def requiredChildDistribution = AllTuples :: Nil
 
   def cache(iterator: Iterator[Row]): CachedIterator = cacheFilter match {
     case Some(filter) =>

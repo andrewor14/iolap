@@ -44,6 +44,7 @@ case class Window(
   override def requiredChildDistribution: Seq[Distribution] =
     if (windowSpec.partitionSpec.isEmpty) {
       // This operator will be very expensive.
+      println("WINDOW: am I nil")
       AllTuples :: Nil
     } else {
       ClusteredDistribution(windowSpec.partitionSpec) :: Nil

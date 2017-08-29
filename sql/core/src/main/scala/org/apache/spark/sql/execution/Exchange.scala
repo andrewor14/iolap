@@ -342,10 +342,13 @@ private[sql] case class EnsureRequirements(sqlContext: SQLContext) extends Rule[
 
         val fixedChildren = requirements.zipped.map {
           case (AllTuples, rowOrdering, child) =>
+            println("HEY GUYS I'M SINGLE PARTIONING")
             addOperatorsIfNecessary(SinglePartition, rowOrdering, child)
           case (ClusteredDistribution(clustering), rowOrdering, child) =>
+            println("HEY GUYS I'M HASH")
             addOperatorsIfNecessary(HashPartitioning(clustering, numPartitions), rowOrdering, child)
           case (OrderedDistribution(ordering), rowOrdering, child) =>
+            println("HEY GUYS I'M ORDER")
             addOperatorsIfNecessary(RangePartitioning(ordering, numPartitions), rowOrdering, child)
 
           case (UnspecifiedDistribution, Seq(), child) =>

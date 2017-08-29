@@ -54,6 +54,7 @@ case class Aggregate(
       UnspecifiedDistribution :: Nil
     } else {
       if (groupingExpressions == Nil) {
+        println("AGGG: Am I nil?")
         AllTuples :: Nil
       } else {
         ClusteredDistribution(groupingExpressions) :: Nil

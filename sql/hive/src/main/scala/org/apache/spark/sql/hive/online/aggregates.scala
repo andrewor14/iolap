@@ -43,7 +43,13 @@ trait DelegatedAggregate {
       UnspecifiedDistribution :: Nil
     } else {
       if (groupingExpressions == Nil) {
-        AllTuples :: Nil
+        println("Delegate agg: I AM HERE BWARHHHH " + getClass.getCanonicalName)
+        // AllTuples :: Nil
+//        val aggExprs = aggregateExpressions.collect {
+//          case t @ TaggedAlias(_, _, _) => t.child
+//          case e => e
+//        }
+        ClusteredDistribution(Seq(Literal(1))) :: Nil
       } else {
         ClusteredDistribution(groupingExpressions) :: Nil
       }
@@ -269,11 +275,11 @@ case class AggregateWith2Inputs2Outputs(
     lineageRelayInfo: LineageRelay,
     integrityInfo: Option[IntegrityInfo],
     groupingExpressions: Seq[Expression],
-    aggregateExpressions: Seq[NamedExpression],
     child: SparkPlan)(
     @transient val controller: OnlineDataFrame,
     val trace: List[Int] = -1 :: Nil,
-    val opId: OpId = OpId.newOpId)
+    val opId: OpId = OpId.newOpId,
+    val aggregateExpressions: Seq[NamedExpression])
   extends UnaryNode with DelegatedAggregate with Relay with OnlineAggregate {
 
   val partial = false
@@ -545,13 +551,15 @@ case class AggregateWith2Inputs2Outputs(
     }
   }
 
-  override protected final def otherCopyArgs = controller :: trace :: opId :: Nil
+  override protected final def otherCopyArgs = {
+    controller :: trace :: opId :: aggregateExpressions :: Nil
+  }
 
   override def simpleString: String = s"${super.simpleString} $opId"
 
-  def newBatch(newTrace: List[Int]) =
+  def newBatch(newTrace: List[Int]): AggregateWith2Inputs2Outputs =
     AggregateWith2Inputs2Outputs(cacheFilter, streamRefresh, lineageRelayInfo, integrityInfo,
-      groupingExpressions, aggregateExpressions, child)(controller, newTrace, opId)
+      groupingExpressions, child)(controller, newTrace, opId, aggregateExpressions)
 }
 
 case class AggregateWith2Inputs(
@@ -559,11 +567,11 @@ case class AggregateWith2Inputs(
     streamRefresh: RefreshInfo,
     partial: Boolean,
     groupingExpressions: Seq[Expression],
-    aggregateExpressions: Seq[NamedExpression],
     child: SparkPlan)(
     @transient val controller: OnlineDataFrame,
     @transient val trace: List[Int] = -1 :: Nil,
-    val opId: OpId = OpId.newOpId)
+    val opId: OpId = OpId.newOpId,
+    val aggregateExpressions: Seq[NamedExpression])
   extends UnaryNode with DelegatedAggregate with OnlineAggregate {
 
   def retrieveState(rdd: RDD[Row]): RDD[Row] = {
@@ -684,11 +692,13 @@ case class AggregateWith2Inputs(
     }
   }
 
-  override protected final def otherCopyArgs = controller :: trace :: opId :: Nil
+  override protected final def otherCopyArgs = {
+    controller :: trace :: opId :: aggregateExpressions :: Nil
+  }
 
   override def simpleString: String = s"${super.simpleString} $opId"
 
-  def newBatch(newTrace: List[Int]) =
+  def newBatch(newTrace: List[Int]): AggregateWith2Inputs =
     AggregateWith2Inputs(cacheFilter, streamRefresh,
-      partial, groupingExpressions, aggregateExpressions, child)(controller, newTrace, opId)
+      partial, groupingExpressions, child)(controller, newTrace, opId, aggregateExpressions)
 }

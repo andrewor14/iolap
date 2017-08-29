@@ -27,7 +27,7 @@ import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 
 object RobertInTheFile {
-  private val tableName = "students"
+  private val TABLE_NAME = "students"
 
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf
@@ -73,7 +73,7 @@ object RobertInTheFile {
     val inputPath = conf.get("spark.naga.inputPath", "data/students.json")
     val numPartitions = conf.get("spark.naga.numPartitions", "1000").toInt
     val cacheInput = conf.get("spark.naga.cacheInput", "false").toBoolean
-    val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, tableName)
+    val streamedRelations = sqlContext.getConf(STREAMED_RELATIONS, TABLE_NAME)
     val numBatches = sqlContext.getConf(NUMBER_BATCHES, "100")
     val numBootstrapTrials = sqlContext.getConf(NUMBER_BOOTSTRAP_TRIALS, "100")
     sqlContext.setConf(STREAMED_RELATIONS, streamedRelations)
@@ -83,17 +83,17 @@ object RobertInTheFile {
     val df = sqlContext.read.json(inputPath)
     sqlContext
       .createDataFrame(df.rdd.repartition(numPartitions), df.schema)
-      .registerTempTable(tableName)
+      .registerTempTable(TABLE_NAME)
     if (cacheInput) {
-      sqlContext.cacheTable(tableName)
-      sqlContext.table(tableName).count() // materialize
+      sqlContext.cacheTable(TABLE_NAME)
+      sqlContext.table(TABLE_NAME).count() // materialize
     }
   }
 
   def makeOnlineDF(sqlContext: SQLContext): OnlineDataFrame = {
     val conf = sqlContext.sparkContext.getConf
-    val selectArg = conf.get("spark.naga.selectArg", "AVG(uniform)")
-    sqlContext.sql(s"SELECT $selectArg FROM $tableName").online
+    val query = conf.get("spark.naga.query", s"SELECT AVG(uniform) FROM $TABLE_NAME")
+    sqlContext.sql(query).online
   }
 
   private def makeThread(poolNum: Int): Thread = {

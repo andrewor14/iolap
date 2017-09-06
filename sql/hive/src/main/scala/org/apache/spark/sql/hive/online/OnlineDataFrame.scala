@@ -133,7 +133,7 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
     }
     // If SLAQ is enabled, report confidence interval size to scheduler as loss
     // if (PoolReweighterLoss.hasRegisteredPools) {
-    val slaqEnabled = sparkContext.conf.get("spark.slaq.enabled", "true").toBoolean
+    val slaqEnabled = sparkContext.conf.get("spark.slaq.enabled", "false").toBoolean
     if (slaqEnabled) {
       assert(rows.length == 1, "Wrong type of query")
       val innerRow = rows(0).get(0).asInstanceOf[org.apache.spark.sql.Row]

@@ -1,0 +1,92 @@
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+var numQueries = 9;
+function random_number(num , mul, offset) 
+  {
+     var value = [ ]  
+     for(i=0;i<=num;i++)
+      {
+       rand = Math.random() * mul + offset;
+        value.push(rand);
+      }
+     return value;
+  }
+
+function update() {
+    for(var i = 0; i < numQueries; i++) {
+        var divName = "plotlyDiv" + (i + 1);
+        var fileName = "t" + (i + 1) + ".output";
+        getDataAndGraph(fileName, divName, i);
+    }
+    setTimeout(update, 5000);
+}
+
+function getDataAndGraph(fileName, divName, num) {
+    var data = [];
+    $.ajax({
+        method: "GET",
+        url: fileName
+    })
+    .done(function(text) {
+        // groupbys is now [low,avg,hi] for all groups
+        var groupbys = text.split("\n").map(x => JSON.parse(x));
+        var trace = [{
+            x: [1,2,3,4,5],
+            y: groupbys.map(x => x[1]),
+            error_y: {
+                type: 'data',
+                symmetric: false,
+                array: groupbys.map(x => x[2] - x[1]),
+                arrayminus: groupbys.map(x => x[1] - x[0])
+            },
+            type: 'bar'
+        }];
+        drawGraph(trace, divName, num);
+    })
+    .fail(function() {});
+}
+var titles = ["SELECT AVG(normal) GROUP BY fivegroup (0.5g)",
+              "SELECT AVG(normal) GROUP BY fivegroup (1g)",
+              "SELECT AVG(normal) GROUP BY fivegroup (5g)"];
+function drawGraph(data, divName, num) {
+    var layout = {
+        showlegend: false, 
+        title: titles[num % 3], 
+        yaxis: {
+                    title: "AVG(normal)",
+                    autorange: false,
+                    range: [-50,50]
+               },
+        height: 300,
+        width: 500
+    };
+    Plotly.purge(divName);
+    if ($("#" + divName).html() === "") 
+        Plotly.plot(divName, data, layout);
+    else {
+        Plotly.update(divName, data, layout);
+        Plotly.redraw(divName);
+    }
+}
+</script>
+<style>
+.pl {
+    float: left;
+}
+</style>
+</head>
+<body onload="update()">
+<div class="pl" id="plotlyDiv1"></div>
+<div class="pl" id="plotlyDiv2"></div>
+<div class="pl" id="plotlyDiv3"></div>
+<div class="pl" id="plotlyDiv4"></div>
+<div class="pl" id="plotlyDiv5"></div>
+<div class="pl" id="plotlyDiv6"></div>
+<div class="pl" id="plotlyDiv7"></div>
+<div class="pl" id="plotlyDiv8"></div>
+<div class="pl" id="plotlyDiv9"></div>
+</body>
+</html>

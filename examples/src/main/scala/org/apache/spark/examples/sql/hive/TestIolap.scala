@@ -29,27 +29,34 @@ object TestIolap extends Logging {
     new Thread {
         val sc = sqlContext.sparkContext
         val avgColumn = sc.getConf.get("spark.slaq.avgColumn", "uniform")
-        val odf = sqlContext.sql(s"SELECT AVG($avgColumn) FROM table WHERE zipf > 2 AND twin_peak > 1000").online
+        val odf = sqlContext.sql(s"SELECT AVG($avgColumn) FROM table GROUP BY fivegroup").online
         odf.prepareDataFrames()
 
       override def run(): Unit = {
         sc.setLocalProperty("spark.scheduler.pool", name)
         sc.addSchedulablePool(name, 0, 1000000)
+        var prevLoss = 0.0
         val result = (1 to odf.progress._2).map { i =>
-          logInfo(s"LOGAN: job queued for $name")
           val col = odf.collectNext()
-          val avg = col(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(0)
-          val low = col(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(1)
-          val high = col(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2)
-          val loss = high - low
-          logInfo(s"LOGAN: $name $avg $loss")
+          var lossSum = 0.0
+          col.foreach { c =>
+            val avg = c.get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(0)
+            val low = c.get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(1)
+            val high = c.get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2)
+            val loss = high - low
+            lossSum += loss
+          }
+          val loss = lossSum / col.size
+          logInfo(s"LOGAN: $name $loss")
           val isFair = sc.getConf.get("spark.slaq.isFair", "false").equals("true")
           if (!isFair) {
-            /*
-            if (loss == 0) sc.setPoolWeight(name, 0)
-            else sc.setPoolWeight(name, ((loss - 1.25) / (16.5-1.25) * 1000).toInt)
-            */
-            sc.setPoolWeight(name, loss.toInt)
+            if (prevLoss == 0.0) {
+                // sc.setPoolWeight(name, loss.toInt)
+            } else {
+                val dLoss = prevLoss - loss
+                sc.setPoolWeight(name, dLoss.toInt * 10000)
+            }
+            prevLoss = loss
           } else {
             sc.setPoolWeight(name, 1)
           }
@@ -64,14 +71,14 @@ object TestIolap extends Logging {
     val sqlContext = new HiveContext(sc)
     val numPools = sc.getConf.get("spark.slaq.numPools", "1").toInt
     val poolNames = (1 to numPools).map( x => s"t$x" ).toArray
-    val numBatches = sc.getConf.get("spark.slaq.numBatches", "160")
+    val numBatches = sc.getConf.get("spark.slaq.numBatches", "40")
     val streamedRelations = poolNames.mkString(",")
     val numBootstrapTrials = "200"
     val waitPeriod = 60000
 
 
     val numPartitions = sc.getConf.get("spark.slaq.numPartitions", "16000").toInt
-    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students1g.json")
+    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students.json")
     val df = sqlContext.read.json(inputFile)
     val newDF = sqlContext.createDataFrame(
       df.rdd.repartition(numPartitions), df.schema)

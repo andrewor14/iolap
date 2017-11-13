@@ -17,6 +17,8 @@
 
 package org.apache.spark.examples.sql.hive
 
+import java.io.{BufferedWriter, FileWriter}
+
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{Logging, SparkConf, SparkContext}
@@ -24,31 +26,58 @@ import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 import org.apache.spark.sql.hive.online.RandomSeed
 
-object TestIolap extends Logging {
+object TestIolapPR extends Logging {
   def makeThread(sqlContext: HiveContext, name: String): Thread = {
     new Thread {
-        val sc = sqlContext.sparkContext
-        val avgColumn = sc.getConf.get("spark.slaq.avgColumn", "uniform")
-        val odf = sqlContext.sql(s"SELECT AVG($avgColumn) FROM table").online
-        odf.prepareDataFrames()
+      val sc = sqlContext.sparkContext
+      val avgColumn = sc.getConf.get("spark.slaq.avgColumn", "uniform")
+      val logDir = sc.getConf.get("spark.slaq.logDir",
+        "/disk/local/disk1/stafman/iolap-princeton/dashboard/")
+      val tableName = "table" + (name.charAt(name.size - 1).toInt - 1) % 3
+//      val odf = sqlContext
+//        .sql(s"SELECT AVG($avgColumn) FROM $tableName GROUP BY fivegroup").online
+      val odf = sqlContext
+        .sql(s"SELECT AVG($tableName.normal) from $tableName JOIN " +
+          s"$tableName AS t ON $tableName.coin_toss = t.ct" +
+          s"").online
+      odf.prepareDataFrames()
 
       override def run(): Unit = {
         sc.setLocalProperty("spark.scheduler.pool", name)
         sc.addSchedulablePool(name, 0, 1000000)
+        var prevLoss = 0.0
+        var initialDLoss = 0.0
         val result = (1 to odf.progress._2).map { i =>
-          logInfo(s"LOGAN: job queued for $name")
           val col = odf.collectNext()
-          val avg = col(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(0)
-          val low = col(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(1)
-          val high = col(0).get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2)
-          val loss = high - low
-          logInfo(s"LOGAN: $name $avg $loss")
+          var lossSum = 0.0
+          var currentResult = ""
+          col.foreach { c =>
+            val avg = c.get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(0)
+            val low = c.get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(1)
+            val high = c.get(0).asInstanceOf[org.apache.spark.sql.Row].getDouble(2)
+            currentResult += "[" + low + "," + avg + "," + high + "]\n"
+            val loss = high - low
+            lossSum += loss
+          }
+          val bw = new BufferedWriter(new FileWriter(logDir + name + ".output"))
+          bw.write(currentResult.trim())
+          bw.close()
+          val loss = lossSum / col.size
+          var dLoss = prevLoss - loss
+          prevLoss = loss
+          if (initialDLoss == 0.0) {
+            initialDLoss = -dLoss
+            dLoss = 1.0
+          } else {
+            dLoss = dLoss / initialDLoss
+          }
           val isFair = sc.getConf.get("spark.slaq.isFair", "false").equals("true")
           if (!isFair) {
-            sc.setPoolWeight(name, loss.toInt)
+            sc.setPoolWeight(name, (dLoss * 10000).toInt)
           } else {
             sc.setPoolWeight(name, 1)
           }
+          logInfo(s"LOGAN: $name $dLoss")
         }
       }
     }
@@ -60,23 +89,24 @@ object TestIolap extends Logging {
     val sqlContext = new HiveContext(sc)
     val numPools = sc.getConf.get("spark.slaq.numPools", "1").toInt
     val poolNames = (1 to numPools).map( x => s"t$x" ).toArray
-    val numBatches = sc.getConf.get("spark.slaq.numBatches", "160")
+    val numBatches = sc.getConf.get("spark.slaq.numBatches", "40")
     val streamedRelations = poolNames.mkString(",")
     val numBootstrapTrials = "200"
-    val waitPeriod = 100000
-
+//    val waitPeriod = 60000
+    val waitPeriod = 0
 
     val numPartitions = sc.getConf.get("spark.slaq.numPartitions", "16000").toInt
-    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students10g.json")
-    val df = sqlContext.read.json(inputFile)
-    val newDF = sqlContext.createDataFrame(
-      df.rdd.repartition(numPartitions), df.schema)
-    newDF.registerTempTable("table")
-    sqlContext.table("table").withColumn(SEED_COLUMN, new Column(RandomSeed()))
+//    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students5g.json")
+    val inputFiles = Array("data/students0.5g.json", "data/students.json", "data/students5g.json")
+    val dfs = (0 to 2).map(x => sqlContext.read.json(inputFiles(x)))
+    val newDFs = (0 to 2).map(x => sqlContext.createDataFrame(
+      dfs(x).rdd.repartition(numPartitions), dfs(x).schema))
+    (0 to 2).foreach{ x => newDFs(x).registerTempTable("table" + x) }
+//    sqlContext.table("table").withColumn(SEED_COLUMN, new Column(RandomSeed()))
 //     sqlContext.cacheTable("table")
-    sqlContext.table("table").count()
-
-    sqlContext.setConf(STREAMED_RELATIONS, "table")
+//    sqlContext.table("table").count()
+    val streamedRels = "table0,table1,table2"
+    sqlContext.setConf(STREAMED_RELATIONS, streamedRels)
     sqlContext.setConf(NUMBER_BATCHES, numBatches)
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)
     val threads = poolNames.map { name => makeThread(sqlContext, name) }

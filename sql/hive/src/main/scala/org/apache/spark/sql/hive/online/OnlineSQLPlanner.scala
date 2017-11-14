@@ -1441,6 +1441,7 @@ object OnlinePlannerUtil {
   }
 
   def getGrowthMode(plan: SparkPlan): GrowthMode = {
+    println(s"=========== GETTING GROWTH MODE FOR ${plan.simpleString} ===========")
     def fullAggregate(child: SparkPlan) = {
       exchange(getGrowthMode(child)) match {
         case GrowthMode(p, Fixed) => GrowthMode(Growth.min(p, AlmostFixed), Fixed)
@@ -1458,7 +1459,7 @@ object OnlinePlannerUtil {
       }
     }
 
-    plan match {
+    val thing = plan match {
       case _: LeafNode => GrowthMode(Fixed, Fixed)
       case sample: StreamedRelation =>
         require(getGrowthMode(sample.child) == GrowthMode(Fixed, Fixed),
@@ -1490,6 +1491,8 @@ object OnlinePlannerUtil {
       case unary: UnaryNode => getGrowthMode(unary.child)
       case _ => ???
     }
+    println(s"------------- DONE GETTING GROWTH MODE FOR ${plan.simpleString} -------------")
+    return thing
   }
 }
 

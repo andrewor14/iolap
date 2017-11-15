@@ -110,7 +110,7 @@ object TestIolapPR extends Logging {
 //    sqlContext.table("table").withColumn(SEED_COLUMN, new Column(RandomSeed()))
 //     sqlContext.cacheTable("table")
 //    sqlContext.table("table").count()
-    val streamedRels = "table0,table1,table2"
+    val streamedRels = "table0"
     sqlContext.setConf(STREAMED_RELATIONS, streamedRels)
     sqlContext.setConf(NUMBER_BATCHES, numBatches)
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)

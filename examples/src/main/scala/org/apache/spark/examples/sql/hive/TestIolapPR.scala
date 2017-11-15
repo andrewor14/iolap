@@ -40,7 +40,7 @@ object TestIolapPR extends Logging {
         .sql(s"SELECT AVG(colA) FROM (SELECT $tableName.normal" +
           s" as colA, t.fivegroup from $tableName JOIN " +
           s"table1 AS t ON $tableName.index = t.index " +
-          s"ORDER BY fivegroup) cols").online
+          s") cols").online
       logInfo("\n\n\n\nABOUT TO PREPARE DATAFRAMES\n\n\n\n")
       odf.prepareDataFrames()
       logInfo("\n\n\n\nDONE PREPARE DATAFRAMES\n\n\n\n")
@@ -106,10 +106,7 @@ object TestIolapPR extends Logging {
     val dfs = (0 to 2).map(x => sqlContext.read.json(inputFiles(x)))
     val newDFs = (0 to 2).map(x => sqlContext.createDataFrame(
       dfs(x).rdd.repartition(numPartitions), dfs(x).schema))
-    (0 to 2).foreach{ x =>
-      newDFs(x).registerTempTable("table" + x)
-      sqlContext.sql(s"SELECT COUNT(*) FROM table$x").collect()
-    }
+    (0 to 2).foreach{ x => newDFs(x).registerTempTable("table" + x) }
 //    sqlContext.table("table").withColumn(SEED_COLUMN, new Column(RandomSeed()))
 //     sqlContext.cacheTable("table")
 //    sqlContext.table("table").count()

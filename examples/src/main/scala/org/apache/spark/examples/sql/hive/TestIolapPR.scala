@@ -37,10 +37,13 @@ object TestIolapPR extends Logging {
 //      val odf = sqlContext
 //        .sql(s"SELECT AVG($avgColumn) FROM $tableName GROUP BY fivegroup").online
       val odf = sqlContext
-        .sql(s"SELECT AVG($tableName.normal) from $tableName JOIN " +
-          s"$tableName AS t ON $tableName.coin_toss = t.ct" +
-          s"").online
+        .sql(s"SELECT AVG(colA) FROM (SELECT $tableName.normal" +
+          s" as colA, t.fivegroup from $tableName JOIN " +
+          s"table1 AS t ON $tableName.index = t.index " +
+          s"ORDER BY fivegroup) cols").online
+      logInfo("\n\n\n\nABOUT TO PREPARE DATAFRAMES\n\n\n\n")
       odf.prepareDataFrames()
+      logInfo("\n\n\n\nDONE PREPARE DATAFRAMES\n\n\n\n")
 
       override def run(): Unit = {
         sc.setLocalProperty("spark.scheduler.pool", name)
@@ -48,7 +51,9 @@ object TestIolapPR extends Logging {
         var prevLoss = 0.0
         var initialDLoss = 0.0
         val result = (1 to odf.progress._2).map { i =>
+          logInfo(s"\n\n\n\nCOLLECT NEXT ITER $i\n\n\n\n")
           val col = odf.collectNext()
+          logInfo(s"\n\n\n\nDONE COLLECT NEXT ITER $i\n\n\n\n")
           var lossSum = 0.0
           var currentResult = ""
           col.foreach { c =>

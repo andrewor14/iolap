@@ -106,7 +106,10 @@ object TestIolapPR extends Logging {
     val dfs = (0 to 2).map(x => sqlContext.read.json(inputFiles(x)))
     val newDFs = (0 to 2).map(x => sqlContext.createDataFrame(
       dfs(x).rdd.repartition(numPartitions), dfs(x).schema))
-    (0 to 2).foreach{ x => newDFs(x).registerTempTable("table" + x) }
+    (0 to 2).foreach{ x =>
+      newDFs(x).registerTempTable("table" + x)
+      sqlContext.sql(s"SELECT COUNT(*) FROM table$x").collect()
+    }
 //    sqlContext.table("table").withColumn(SEED_COLUMN, new Column(RandomSeed()))
 //     sqlContext.cacheTable("table")
 //    sqlContext.table("table").count()

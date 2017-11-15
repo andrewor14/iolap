@@ -496,6 +496,11 @@ class DAGScheduler(
       allowLocal: Boolean,
       resultHandler: (Int, U) => Unit,
       properties: Properties): JobWaiter[U] = {
+
+    val jobId = nextJobId.getAndIncrement()
+    logInfo(s"\n\n\n\n RUN JOB!!!!!! $jobId \n\n\n\n")
+    logInfo(Thread.currentThread.getStackTrace.map { s => s"  $s" }.mkString("\n"))
+
     // Check to make sure we are not launching a task on a partition that does not exist.
     val maxPartitions = rdd.partitions.length
     partitions.find(p => p >= maxPartitions || p < 0).foreach { p =>
@@ -504,7 +509,6 @@ class DAGScheduler(
           "Total number of partitions: " + maxPartitions)
     }
 
-    val jobId = nextJobId.getAndIncrement()
     if (partitions.size == 0) {
       return new JobWaiter[U](this, jobId, 0, resultHandler)
     }

@@ -19,12 +19,10 @@ package org.apache.spark.examples.sql.hive
 
 import java.io.{BufferedWriter, FileWriter}
 
-import org.apache.spark.sql.Column
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{Logging, SparkConf, SparkContext}
 import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
-import org.apache.spark.sql.hive.online.RandomSeed
 
 object TestIolapPR extends Logging {
   def makeThread(sqlContext: HiveContext, name: String): Thread = {
@@ -33,14 +31,19 @@ object TestIolapPR extends Logging {
       val avgColumn = sc.getConf.get("spark.slaq.avgColumn", "uniform")
       val logDir = sc.getConf.get("spark.slaq.logDir",
         "/disk/local/disk1/stafman/iolap-princeton/dashboard/")
-      val tableName = "table" + (name.charAt(name.size - 1).toInt - 1) % 3
-//      val odf = sqlContext
-//        .sql(s"SELECT AVG($avgColumn) FROM $tableName GROUP BY fivegroup").online
+      val idx = (name.charAt(name.size - 1).toInt - 1) % 3
+      val tableName = "table" + idx
       val odf = sqlContext
-        .sql(s"SELECT AVG($tableName.normal) from $tableName JOIN " +
-          s"$tableName AS t ON $tableName.coin_toss = t.ct" +
-          s"").online
+        .sql(s"SELECT AVG($avgColumn) FROM $tableName GROUP BY fivegroup").online
+//      val queries = Array(s"SELECT AVG(normal) FROM $tableName", "", "")
+//      val odf = sqlContext
+//        .sql(s"SELECT AVG(colA) FROM (SELECT $tableName.normal" +
+//          s" as colA, t.fivegroup from $tableName JOIN " +
+//          s"nonStream AS t ON $tableName.index = t.index " +
+//          s") cols").online
+//      logInfo("\n\n\n\nLOGAN: Before PREPARE\n\n\n\n")
       odf.prepareDataFrames()
+//      logInfo("\n\n\n\nLOGAN: After PREPARE\n\n\n\n")
 
       override def run(): Unit = {
         sc.setLocalProperty("spark.scheduler.pool", name)
@@ -48,7 +51,9 @@ object TestIolapPR extends Logging {
         var prevLoss = 0.0
         var initialDLoss = 0.0
         val result = (1 to odf.progress._2).map { i =>
+          val t1 = System.currentTimeMillis()
           val col = odf.collectNext()
+          logInfo(s"LOGAN: time ${System.currentTimeMillis() - t1}")
           var lossSum = 0.0
           var currentResult = ""
           col.foreach { c =>
@@ -92,20 +97,31 @@ object TestIolapPR extends Logging {
     val numBatches = sc.getConf.get("spark.slaq.numBatches", "40")
     val streamedRelations = poolNames.mkString(",")
     val numBootstrapTrials = "200"
-//    val waitPeriod = 60000
+    // val waitPeriod = 60000
     val waitPeriod = 0
 
     val numPartitions = sc.getConf.get("spark.slaq.numPartitions", "16000").toInt
 //    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students5g.json")
-    val inputFiles = Array("data/students0.5g.json", "data/students.json", "data/students5g.json")
-    val dfs = (0 to 2).map(x => sqlContext.read.json(inputFiles(x)))
-    val newDFs = (0 to 2).map(x => sqlContext.createDataFrame(
+//    val inputFiles = Array("data/students0.5g.json", "data/students.json", "data/students5g.json")
+//    val inputFiles = Array("data/students0.5g.json", "/disk/local/disk2/stafman/students30g_2.json")
+    val inputFiles = Array("/disk/local/disk2/stafman/students30g_2.json")
+//    val inputFiles = Array("data/students5g.json")
+    val regDF = sqlContext.read.json(inputFiles(0))
+    val dfs = (0 until inputFiles.length).map(x => sqlContext.read.json(inputFiles(x)))
+    val newDFs = (0 until inputFiles.length).map(x => sqlContext.createDataFrame(
       dfs(x).rdd.repartition(numPartitions), dfs(x).schema))
-    (0 to 2).foreach{ x => newDFs(x).registerTempTable("table" + x) }
+    val nsd = sqlContext.createDataFrame(regDF.rdd.repartition(numPartitions), regDF.schema)
+    (0 until inputFiles.length).foreach{ x => newDFs(x).registerTempTable("table" + x) }
+    (0 until inputFiles.length).foreach{ x => sqlContext.cacheTable("table" + x); sqlContext.sql(s"SELECT COUNT(*) FROM table$x").collect() }
+//    nsd.cache()
+//    newDFs.map(x => x.cache())
+//    nsd.registerTempTable("nonStream")
+//    sqlContext.cacheTable("nonStream")
+//    nsd.count()
+//    newDFs.map(x => x.count())
 //    sqlContext.table("table").withColumn(SEED_COLUMN, new Column(RandomSeed()))
 //     sqlContext.cacheTable("table")
-//    sqlContext.table("table").count()
-    val streamedRels = "table0,table1,table2"
+    val streamedRels = (0 until inputFiles.length).map( x => s"table$x").toArray.mkString(",")
     sqlContext.setConf(STREAMED_RELATIONS, streamedRels)
     sqlContext.setConf(NUMBER_BATCHES, numBatches)
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)

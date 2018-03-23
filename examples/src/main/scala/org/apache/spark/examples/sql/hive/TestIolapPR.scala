@@ -29,7 +29,7 @@ object TestIolapPR extends Logging {
     new Thread {
       val sc = sqlContext.sparkContext
       val avgColumn = sc.getConf.get("spark.slaq.avgColumn", "uniform")
-      val logDir = sc.getConf.get("spark.slaq.logDir",
+      val logDir = sc.getConf.get("spark.approx.logDir",
         "/disk/local/disk1/stafman/iolap-princeton/dashboard/")
       val idx = (name.charAt(name.size - 1).toInt - 1) % 3
       val tableName = "table" + idx
@@ -104,7 +104,9 @@ object TestIolapPR extends Logging {
 //    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students5g.json")
 //    val inputFiles = Array("data/students0.5g.json", "data/students.json", "data/students5g.json")
 //    val inputFiles = Array("data/students0.5g.json", "/disk/local/disk2/stafman/students30g_2.json")
-    val inputFiles = Array("/disk/local/disk2/stafman/students30g_2.json")
+    // comma separated list of input files
+    val inputFiles = sc.getConf.get("spark.approx.inputFiles",
+      "/disk/local/disk2/stafman/students30g_2.json").split(",")
 //    val inputFiles = Array("data/students5g.json")
     val regDF = sqlContext.read.json(inputFiles(0))
     val dfs = (0 until inputFiles.length).map(x => sqlContext.read.json(inputFiles(x)))

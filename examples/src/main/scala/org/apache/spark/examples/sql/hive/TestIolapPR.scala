@@ -81,8 +81,7 @@ object TestIolapPR extends Logging {
   }
 
   def main(args: Array[String]): Unit = {
-    val sparkConf = new SparkConf().setAppName("TestIolap")
-    val sc = new SparkContext(sparkConf)
+    val sc = new SparkContext
     val sqlContext = new HiveContext(sc)
     val inputFiles = sc.getConf.get("spark.approx.inputFiles",
       "/disk/local/disk2/stafman/students30g_2.json").split(",")

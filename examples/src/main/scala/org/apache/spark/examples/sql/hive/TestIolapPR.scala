@@ -56,7 +56,7 @@ object TestIolapPR extends Logging {
             val loss = high - low
             lossSum += loss
           }
-          val bw = new BufferedWriter(new FileWriter(logDir + name + ".output"))
+          val bw = new BufferedWriter(new FileWriter(s"$logDir/$name.output"))
           bw.write(currentResult.trim())
           bw.close()
           val loss = lossSum / col.length

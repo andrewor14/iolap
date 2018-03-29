@@ -84,11 +84,15 @@ object TestIolapPR extends Logging {
     val sparkConf = new SparkConf().setAppName("TestIolap")
     val sc = new SparkContext(sparkConf)
     val sqlContext = new HiveContext(sc)
-    val numPools = sc.getConf.get("spark.approx.numPools", "1").toInt
-    val numBatches = sc.getConf.get("spark.approx.numBatches", "40")
-    val numPartitions = sc.getConf.get("spark.approx.numPartitions", "16000").toInt
     val inputFiles = sc.getConf.get("spark.approx.inputFiles",
       "/disk/local/disk2/stafman/students30g_2.json").split(",")
+    val numPools = sc.getConf.get("spark.approx.numPools", "1").toInt
+    if (numPools > inputFiles.length) {
+      throw new IllegalArgumentException(
+        s"Not enough input files to process (got ${inputFiles.length}, wanted $numPools")
+    }
+    val numBatches = sc.getConf.get("spark.approx.numBatches", "40")
+    val numPartitions = sc.getConf.get("spark.approx.numPartitions", "16000").toInt
     val shouldCacheTables = sc.getConf.get("spark.approx.shouldCacheTables", "true").toBoolean
     val streamedRelations = (0 until inputFiles.length).map { x => s"table$x" }.mkString(",")
     // number of bootstraps to use in iOLAP
@@ -111,7 +115,7 @@ object TestIolapPR extends Logging {
       }
     }
 
-    val threads = (1 to numPools).map { i => makeThread(i, sqlContext) }
+    val threads = (0 until numPools).map { i => makeThread(i, sqlContext) }
     threads.foreach { t =>
       t.start()
       Thread.sleep(waitPeriod)

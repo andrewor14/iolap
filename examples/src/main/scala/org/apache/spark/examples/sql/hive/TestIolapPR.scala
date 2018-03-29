@@ -25,35 +25,27 @@ import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 
 object TestIolapPR extends Logging {
-  def makeThread(sqlContext: HiveContext, name: String): Thread = {
+  def makeThread(index: Int, sqlContext: HiveContext): Thread = {
     new Thread {
-      val sc = sqlContext.sparkContext
-      val avgColumn = sc.getConf.get("spark.slaq.avgColumn", "uniform")
-      val logDir = sc.getConf.get("spark.approx.logDir",
+      private val name = s"t$index"
+      private val tableName = s"table$index"
+      private val sc = sqlContext.sparkContext
+      private val avgColumn = sc.getConf.get("spark.approx.avgColumn", "uniform")
+      private val logDir = sc.getConf.get("spark.approx.logDir",
         "/disk/local/disk1/stafman/iolap-princeton/dashboard/")
-      val idx = (name.charAt(name.size - 1).toInt - 1) % 3
-      val tableName = "table" + idx
-      val odf = sqlContext
+      private val odf = sqlContext
         .sql(s"SELECT AVG($avgColumn) FROM $tableName GROUP BY fivegroup").online
-//      val queries = Array(s"SELECT AVG(normal) FROM $tableName", "", "")
-//      val odf = sqlContext
-//        .sql(s"SELECT AVG(colA) FROM (SELECT $tableName.normal" +
-//          s" as colA, t.fivegroup from $tableName JOIN " +
-//          s"nonStream AS t ON $tableName.index = t.index " +
-//          s") cols").online
-//      logInfo("\n\n\n\nLOGAN: Before PREPARE\n\n\n\n")
       odf.prepareDataFrames()
-//      logInfo("\n\n\n\nLOGAN: After PREPARE\n\n\n\n")
 
       override def run(): Unit = {
         sc.setLocalProperty("spark.scheduler.pool", name)
         sc.addSchedulablePool(name, 0, 1000000)
         var prevLoss = 0.0
         var initialDLoss = 0.0
-        val result = (1 to odf.progress._2).map { i =>
+        (1 to odf.progress._2).foreach { i =>
           val t1 = System.currentTimeMillis()
           val col = odf.collectNext()
-          logInfo(s"LOGAN: time ${System.currentTimeMillis() - t1}")
+          logInfo(s"LOGAN: collectNext time ${System.currentTimeMillis() - t1}")
           var lossSum = 0.0
           var currentResult = ""
           col.foreach { c =>
@@ -67,22 +59,22 @@ object TestIolapPR extends Logging {
           val bw = new BufferedWriter(new FileWriter(logDir + name + ".output"))
           bw.write(currentResult.trim())
           bw.close()
-          val loss = lossSum / col.size
-          var dLoss = prevLoss - loss
+          val loss = lossSum / col.length
+          val dLoss =
+            if (initialDLoss == 0.0) {
+              initialDLoss = loss
+              1.0
+            } else {
+              (prevLoss - loss) / initialDLoss // normalize
+            }
           prevLoss = loss
-          if (initialDLoss == 0.0) {
-            initialDLoss = -dLoss
-            dLoss = 1.0
-          } else {
-            dLoss = dLoss / initialDLoss
-          }
-          val isFair = sc.getConf.get("spark.slaq.isFair", "false").equals("true")
+          val isFair = sc.getConf.get("spark.approx.isFair", "false").toBoolean
           if (!isFair) {
             sc.setPoolWeight(name, (dLoss * 10000).toInt)
           } else {
             sc.setPoolWeight(name, 1)
           }
-          logInfo(s"LOGAN: $name $dLoss")
+          logInfo(s"LOGAN: normalized delta loss $name $dLoss")
         }
       }
     }
@@ -92,42 +84,31 @@ object TestIolapPR extends Logging {
     val sparkConf = new SparkConf().setAppName("TestIolap")
     val sc = new SparkContext(sparkConf)
     val sqlContext = new HiveContext(sc)
-    val numPools = sc.getConf.get("spark.slaq.numPools", "1").toInt
-    val poolNames = (1 to numPools).map( x => s"t$x" ).toArray
-    val numBatches = sc.getConf.get("spark.slaq.numBatches", "40")
-    val streamedRelations = poolNames.mkString(",")
-    val numBootstrapTrials = "200"
-    // val waitPeriod = 60000
-    val waitPeriod = 0
-
-    val numPartitions = sc.getConf.get("spark.slaq.numPartitions", "16000").toInt
-//    val inputFile = sc.getConf.get("spark.slaq.inputFile", "data/students5g.json")
-//    val inputFiles = Array("data/students0.5g.json", "data/students.json", "data/students5g.json")
-//    val inputFiles = Array("data/students0.5g.json", "/disk/local/disk2/stafman/students30g_2.json")
-    // comma separated list of input files
+    val numPools = sc.getConf.get("spark.approx.numPools", "1").toInt
+    val numBatches = sc.getConf.get("spark.approx.numBatches", "40")
+    val numPartitions = sc.getConf.get("spark.approx.numPartitions", "16000").toInt
     val inputFiles = sc.getConf.get("spark.approx.inputFiles",
       "/disk/local/disk2/stafman/students30g_2.json").split(",")
-//    val inputFiles = Array("data/students5g.json")
-    val regDF = sqlContext.read.json(inputFiles(0))
-    val dfs = (0 until inputFiles.length).map(x => sqlContext.read.json(inputFiles(x)))
-    val newDFs = (0 until inputFiles.length).map(x => sqlContext.createDataFrame(
-      dfs(x).rdd.repartition(numPartitions), dfs(x).schema))
-    val nsd = sqlContext.createDataFrame(regDF.rdd.repartition(numPartitions), regDF.schema)
-    (0 until inputFiles.length).foreach{ x => newDFs(x).registerTempTable("table" + x) }
-    (0 until inputFiles.length).foreach{ x => sqlContext.cacheTable("table" + x); sqlContext.sql(s"SELECT COUNT(*) FROM table$x").collect() }
-//    nsd.cache()
-//    newDFs.map(x => x.cache())
-//    nsd.registerTempTable("nonStream")
-//    sqlContext.cacheTable("nonStream")
-//    nsd.count()
-//    newDFs.map(x => x.count())
-//    sqlContext.table("table").withColumn(SEED_COLUMN, new Column(RandomSeed()))
-//     sqlContext.cacheTable("table")
-    val streamedRels = (0 until inputFiles.length).map( x => s"table$x").toArray.mkString(",")
-    sqlContext.setConf(STREAMED_RELATIONS, streamedRels)
+    val streamedRelations = (0 until inputFiles.length).map { x => s"table$x" }.mkString(",")
+    // number of bootstraps to use in iOLAP
+    val numBootstrapTrials = "200"
+    // how long to wait before starting the next thread
+    val waitPeriod = 0
+    sqlContext.setConf(STREAMED_RELATIONS, streamedRelations)
     sqlContext.setConf(NUMBER_BATCHES, numBatches)
     sqlContext.setConf(NUMBER_BOOTSTRAP_TRIALS, numBootstrapTrials)
-    val threads = poolNames.map { name => makeThread(sqlContext, name) }
+
+    // read each input file into a table and cache the table
+    (0 until inputFiles.length).foreach { x =>
+      val df = sqlContext.read.json(inputFiles(x))
+      val newDF = sqlContext.createDataFrame(df.rdd.repartition(numPartitions), df.schema)
+      newDF.registerTempTable("table" + x)
+      sqlContext.cacheTable("table" + x)
+      // trigger the cache
+      sqlContext.sql(s"SELECT COUNT(*) FROM table$x").collect()
+    }
+
+    val threads = (1 to numPools).map { i => makeThread(i, sqlContext) }
     threads.foreach { t =>
       t.start()
       Thread.sleep(waitPeriod)

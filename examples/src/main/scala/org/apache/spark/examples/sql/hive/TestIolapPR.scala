@@ -89,6 +89,7 @@ object TestIolapPR extends Logging {
     val numPartitions = sc.getConf.get("spark.approx.numPartitions", "16000").toInt
     val inputFiles = sc.getConf.get("spark.approx.inputFiles",
       "/disk/local/disk2/stafman/students30g_2.json").split(",")
+    val shouldCacheTables = sc.getConf.get("spark.approx.shouldCacheTables", "true").toBoolean
     val streamedRelations = (0 until inputFiles.length).map { x => s"table$x" }.mkString(",")
     // number of bootstraps to use in iOLAP
     val numBootstrapTrials = "200"
@@ -105,7 +106,9 @@ object TestIolapPR extends Logging {
       newDF.registerTempTable("table" + x)
       sqlContext.cacheTable("table" + x)
       // trigger the cache
-      sqlContext.sql(s"SELECT COUNT(*) FROM table$x").collect()
+      if (shouldCacheTables) {
+        sqlContext.sql(s"SELECT COUNT(*) FROM table$x").collect()
+      }
     }
 
     val threads = (1 to numPools).map { i => makeThread(i, sqlContext) }

@@ -38,7 +38,7 @@ dlog () {
 
 acquire_sbt_jar () {
   SBT_VERSION=`awk -F "=" '/sbt\.version/ {print $2}' ./project/build.properties`
-  URL1=https://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/${SBT_VERSION}/sbt-launch.jar
+  URL1=https://dl.bintray.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.7/sbt-launch.jar
   JAR=build/sbt-launch-${SBT_VERSION}.jar
 
   sbt_jar=$JAR

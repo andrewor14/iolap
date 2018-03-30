@@ -95,7 +95,7 @@ object TestIolapPR extends Logging {
     val shouldCacheTables = sc.getConf.get("spark.approx.shouldCacheTables", "true").toBoolean
     val streamedRelations = (0 until inputFiles.length).map { x => s"table$x" }.mkString(",")
     // number of bootstraps to use in iOLAP
-    val numBootstrapTrials = "200"
+    val numBootstrapTrials = "300"
     // how long to wait before starting the next thread
     val waitPeriod = 0
     sqlContext.setConf(STREAMED_RELATIONS, streamedRelations)

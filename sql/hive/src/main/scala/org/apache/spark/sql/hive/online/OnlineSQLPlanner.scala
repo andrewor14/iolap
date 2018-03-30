@@ -96,7 +96,9 @@ object SafetyCheck extends Rule[SparkPlan] {
     case join: SortMergeJoin => join
     // case join: LeftSemiJoinHash => join
     case sort: ExternalSort => sort
-    case _ => ???
+    case e =>
+      println(e.simpleString)
+      ???
   }.transformAllExpressions {
     case alias: Alias =>
       alias.transformChildrenDown {
@@ -1203,7 +1205,9 @@ case class ImplementJoin(controller: OnlineDataFrame) extends Rule[SparkPlan] {
             collectRefreshInfo(build.output), collectRefreshInfo(stream.output),
             leftKeys, rightKeys, swap(buildSide), left, right)(
               controller)
-        case _ => ???
+        case x =>
+          println(x)
+          ???
       }
 
     case join@SortMergeJoin(leftKeys, rightKeys, left, right) =>

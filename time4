@@ -1,0 +1,44 @@
+18/03/29 12:04:53.322 INFO SparkContext: Added JAR file:/disk/local/disk1/stafman/iolap-princeton/iolap/examples/target/scala-2.10/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar at http://128.112.7.130:56495/jars/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar with timestamp 1522339493321
+18/03/29 12:23:50.419 INFO TestIolapPR: LOGAN: time 70649
+18/03/29 12:24:04.093 INFO TestIolapPR: LOGAN: time 13514
+18/03/29 12:24:18.151 INFO TestIolapPR: LOGAN: time 14058
+18/03/29 12:24:35.881 INFO TestIolapPR: LOGAN: time 17730
+18/03/29 12:24:57.696 INFO TestIolapPR: LOGAN: time 21814
+18/03/29 12:25:12.630 INFO TestIolapPR: LOGAN: time 14933
+18/03/29 12:25:30.724 INFO TestIolapPR: LOGAN: time 18093
+18/03/29 12:25:47.383 INFO TestIolapPR: LOGAN: time 16657
+18/03/29 12:26:00.518 INFO TestIolapPR: LOGAN: time 13134
+18/03/29 12:26:15.999 INFO TestIolapPR: LOGAN: time 15481
+18/03/29 12:26:26.860 INFO TestIolapPR: LOGAN: time 10860
+18/03/29 12:26:36.822 INFO TestIolapPR: LOGAN: time 9961
+18/03/29 12:26:45.167 INFO TestIolapPR: LOGAN: time 8344
+18/03/29 12:26:53.888 INFO TestIolapPR: LOGAN: time 8720
+18/03/29 12:27:03.618 INFO TestIolapPR: LOGAN: time 9727
+18/03/29 12:27:10.635 INFO TestIolapPR: LOGAN: time 7016
+18/03/29 12:27:21.521 INFO TestIolapPR: LOGAN: time 10885
+18/03/29 12:27:32.413 INFO TestIolapPR: LOGAN: time 10890
+18/03/29 12:27:41.891 INFO TestIolapPR: LOGAN: time 9476
+18/03/29 12:27:50.799 INFO TestIolapPR: LOGAN: time 8906
+18/03/29 12:28:02.119 INFO TestIolapPR: LOGAN: time 11319
+18/03/29 12:28:09.737 INFO TestIolapPR: LOGAN: time 7617
+18/03/29 12:28:18.977 INFO TestIolapPR: LOGAN: time 9239
+18/03/29 12:28:26.006 INFO TestIolapPR: LOGAN: time 7028
+18/03/29 12:28:35.235 INFO TestIolapPR: LOGAN: time 9227
+18/03/29 12:28:41.096 INFO TestIolapPR: LOGAN: time 5860
+18/03/29 12:28:49.736 INFO TestIolapPR: LOGAN: time 8639
+18/03/29 12:28:58.299 INFO TestIolapPR: LOGAN: time 8562
+18/03/29 12:29:07.741 INFO TestIolapPR: LOGAN: time 9441
+18/03/29 12:29:17.584 INFO TestIolapPR: LOGAN: time 9842
+18/03/29 12:29:25.888 INFO TestIolapPR: LOGAN: time 8303
+18/03/29 12:29:35.134 INFO TestIolapPR: LOGAN: time 9245
+18/03/29 12:29:44.704 INFO TestIolapPR: LOGAN: time 9569
+18/03/29 12:29:54.562 INFO TestIolapPR: LOGAN: time 9857
+18/03/29 12:30:05.383 INFO TestIolapPR: LOGAN: time 10819
+18/03/29 12:30:18.699 INFO TestIolapPR: LOGAN: time 13215
+18/03/29 12:30:39.191 INFO TestIolapPR: LOGAN: time 20491
+18/03/29 12:31:02.085 INFO TestIolapPR: LOGAN: time 22893
+18/03/29 12:31:28.691 INFO TestIolapPR: LOGAN: time 26597
+18/03/29 12:32:00.509 INFO TestIolapPR: LOGAN: time 31817
+	at scala.runtime.AbstractPartialFunction$mcVL$sp.apply$mcVL$sp(AbstractPartialFunction.scala:33)
+	at scala.runtime.AbstractPartialFunction$mcVL$sp.apply(AbstractPartialFunction.scala:33)
+	at scala.runtime.AbstractPartialFunction$mcVL$sp.apply(AbstractPartialFunction.scala:25)

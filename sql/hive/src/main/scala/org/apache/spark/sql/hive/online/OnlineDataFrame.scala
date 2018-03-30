@@ -118,6 +118,7 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
     } else {
       do {
         val nextStart = System.nanoTime()
+        logInfo(s"LOGAN: calling next")
         val df = next()
         val nextEnd = System.nanoTime()
         val collectStart = nextEnd
@@ -151,6 +152,7 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
   }
 
   def next(): DataFrame = {
+    logInfo(s"LOGAN next")
     batches.headOption match {
       case Some(bId) =>
         if (bId != watcher.value) {
@@ -159,8 +161,10 @@ class OnlineDataFrame(dataFrame: DataFrame) extends org.apache.spark.Logging {
           logWarning(s"Recomputing batches ${toRecompute.mkString("[", ",", "]")}")
           recompute(toRecompute, bId + 1)
         }
+        logInfo(s"LOGAN: bId: $bId")
         batches = (bId + 1) :: batches
       case None =>
+        logInfo(s"LOGAN none")
         batches = 0 :: batches
     }
     watcher = new Accumulator(batches.head, MinAccumulatorParam)

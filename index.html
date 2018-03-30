@@ -1,0 +1,109 @@
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+var numQueries = 9;
+var plotDiv = document.getElementById('plotly-div');
+function random_number(num , mul, offset) 
+  {
+     var value = [ ]  
+     for(i=0;i<=num;i++)
+      {
+       rand = Math.random() * mul + offset;
+        value.push(rand);
+      }
+     return value;
+  }
+
+function update() {
+    for(var i = 0; i < numQueries; i++) {
+        var divName = "plotly-div-" + (i + 1);
+        var fileName = "t" + (i + 1) + ".output";
+        getDataAndGraph(fileName, divName);
+    }
+    setTimeout(update, 5000);
+}
+
+function getDataAndGraph(fileName, divName) {
+    var data = [];
+    $.ajax({
+        method: "GET",
+        url: fileName
+    })
+    .done(function(text) {
+        // groupbys is now [low,avg,hi] for all groups
+        var groupbys = text.split("\n").map(x => JSON.parse(x));
+        /*var lower = {
+            x: [1,2,3,4,5],
+            y: groupbys.map(x => x[0]),
+            line: {width: 0},
+            marker: {color: "444"},
+            mode: "lines",
+            name: "Lower Bound",
+            type: "scatter"
+        };
+        var avg = {
+            x: [1,2,3,4,5],
+            y: groupbys.map(x => x[1]),
+            fill: "tonexty",
+            fillcolor: "rgba(68,68,68,0.3)",
+            line: {color: "rgb(31,119,180)"},
+            mode: "lines",
+            name: "Average",
+            type: "scatter"
+        };
+        var upper = {
+            x: [1,2,3,4,5],
+            y: groupbys.map(x => x[2]),
+            fill: "tonexty",
+            fillcolor: "rgba(68,68,68,0.3)",
+            line: {width: 0},
+            marker: {color: "444"},
+            mode: "lines",
+            name: "Upper Bound",
+            type: "scatter"
+        };
+        */
+        var trace = [{
+            x: [1,2,3,4,5],
+            y: groupbys.map(x => x[1]),
+            error_y: {
+                type: 'data',
+                symmetric: false,
+                array: groupbys.map(x => x[2] - x[1]),
+                arrayminus: groupbys.map(x => x[1] - x[0])
+            },
+            type: 'bar'
+        }];
+        drawGraph(trace, divName);
+    });
+}
+
+function drawGraph(data, divName) {
+    
+var layout = {
+  showlegend: false, 
+  title: "SELECT AVG(normal) GROUP BY fivegroup (1g)", 
+  yaxis: {title: "AVG(normal)"},
+  height: 300
+};
+Plotly.purge(divName);
+Plotly.plot(divName, data, layout);
+
+
+}
+</script>
+</head>
+<body onload="update()">
+<div class="pl" id="plotly-div-1"></div>
+<div class="pl" id="plotly-div-2"></div>
+<div class="pl" id="plotly-div-3"></div>
+<div class="pl" id="plotly-div-4"></div>
+<div class="pl" id="plotly-div-5"></div>
+<div class="pl" id="plotly-div-6"></div>
+<div class="pl" id="plotly-div-7"></div>
+<div class="pl" id="plotly-div-8"></div>
+<div class="pl" id="plotly-div-9"></div>
+</body>
+</html>

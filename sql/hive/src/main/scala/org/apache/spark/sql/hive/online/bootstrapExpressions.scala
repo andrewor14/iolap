@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.hive.online
 
+import org.apache.spark.Logging
 import org.apache.spark.sql.catalyst.errors.TreeNodeException
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.trees
@@ -536,7 +537,7 @@ case class ApproxColumn(
     columns: Seq[Expression],
     multiplicities: Seq[Expression],
     finalBatch: Boolean = false)
-  extends Expression {
+  extends Expression with Logging {
 
   override type EvaluatedType = Any
 
@@ -590,6 +591,10 @@ case class ApproxColumn(
     } else {
       row(1) = sorted((values.length * lower).floor.toInt)
       row(2) = sorted((values.length * upper).ceil.toInt - 1)
+//      row(0) = values.length.asInstanceOf[Double]
+      var sortedOut = ""
+      sorted.foreach { x => sortedOut += x + ","}
+      logInfo(s"LOGAN sorted: $sortedOut\n")
     }
     row
   }

@@ -107,9 +107,9 @@ object TestIolapPR extends Logging {
       val df = sqlContext.read.json(inputFiles(x))
       val newDF = sqlContext.createDataFrame(df.rdd.repartition(numPartitions), df.schema)
       newDF.registerTempTable("table" + x)
-      sqlContext.cacheTable("table" + x)
       // trigger the cache
       if (shouldCacheTables) {
+        sqlContext.cacheTable("table" + x)
         sqlContext.sql(s"SELECT COUNT(*) FROM table$x").collect()
       }
     }

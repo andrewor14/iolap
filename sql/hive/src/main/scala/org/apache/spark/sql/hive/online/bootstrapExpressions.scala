@@ -593,8 +593,9 @@ case class ApproxColumn(
     debugString += s"  columns[0] resolved: ${columns.head.resolved}\n"
     debugString += s"  columns[0] prettyString: ${columns.head.prettyString}\n"
     debugString += s"  columns[0] simpleString: ${columns.head.simpleString}\n"
-    debugString += s"  columns[0] treeString: ${columns.head.treeString}\n"
-    debugString += s"  columns[0] children: ${columns.head.children.map(_.simpleString)}\n"
+    (0 until 4).foreach { i =>
+      debugString += s"  columns[$i] treeString: ${columns(i).treeString.stripSuffix("\n")}\n"
+    }
     debugString += "====================================================\n"
     println(debugString)
     numRowsEvaled += 1

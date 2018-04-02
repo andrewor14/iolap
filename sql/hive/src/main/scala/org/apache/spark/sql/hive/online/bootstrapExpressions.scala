@@ -538,6 +538,8 @@ case class ApproxColumn(
     finalBatch: Boolean = false)
   extends Expression {
 
+  private var numRowsEvaled = 0
+
   override type EvaluatedType = Any
 
   override def nullable: Boolean = false
@@ -577,6 +579,26 @@ case class ApproxColumn(
     }
 
   override def eval(input: Row): Any = {
+
+    var debugString = ""
+    debugString += s"============ ApproxColumn eval($numRowsEvaled) ============\n"
+    debugString += s"  input row size: ${input.length}\n"
+    debugString += s"  input row schema: ${input.schema}\n"
+    debugString += s"  input row first few items: ${input.toSeq.take(10)}\n"
+    debugString += s"  multiplicities length: ${multiplicities.length}\n"
+    debugString += s"  columns length: ${columns.length}\n"
+    debugString += s"  exprArray length: ${exprArray.length}\n"
+    debugString += s"  columns[0] class: ${columns.head.getClass.getCanonicalName}\n"
+    debugString += s"  columns[0] data type: ${columns.head.dataType}\n"
+    debugString += s"  columns[0] resolved: ${columns.head.resolved}\n"
+    debugString += s"  columns[0] prettyString: ${columns.head.prettyString}\n"
+    debugString += s"  columns[0] simpleString: ${columns.head.simpleString}\n"
+    debugString += s"  columns[0] treeString: ${columns.head.treeString}\n"
+    debugString += s"  columns[0] children: ${columns.head.children.map(_.simpleString)}\n"
+    debugString += "====================================================\n"
+    println(debugString)
+    numRowsEvaled += 1
+
     val values = exprArray.collect {
       case (mult, col) if mult.eval(input).asInstanceOf[Byte] != 0.toByte => col.eval(input)
     }

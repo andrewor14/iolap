@@ -584,7 +584,7 @@ case class ApproxColumn(
     debugString += s"============ ApproxColumn eval($numRowsEvaled) ============\n"
     debugString += s"  input row size: ${input.length}\n"
     debugString += s"  input row schema: ${input.schema}\n"
-    debugString += s"  input row first few items: ${input.toSeq.take(10)}\n"
+    debugString += s"  input row first few items: ${input.toSeq.take(20)}\n"
     debugString += s"  multiplicities length: ${multiplicities.length}\n"
     debugString += s"  columns length: ${columns.length}\n"
     debugString += s"  exprArray length: ${exprArray.length}\n"

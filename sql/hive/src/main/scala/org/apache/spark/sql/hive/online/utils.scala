@@ -37,8 +37,11 @@ class CachedIterator(val iterator: Iterator[Row]) extends Iterator[Row] {
     row
   }
 
-  def cache(blockId: BlockId): Unit =
-    SparkEnv.get.blockManager.putArray(blockId, cache.toArray, StorageLevel.MEMORY_AND_DISK)
+  def cache(blockId: BlockId): Unit = {
+    if (SparkContext.getOrCreate().getConf.getBoolean("spark.approx.iolapCacheEnabled", true)) {
+      SparkEnv.get.blockManager.putArray(blockId, cache.toArray, StorageLevel.MEMORY_AND_DISK)
+    }
+  }
 }
 
 trait AutoSave {

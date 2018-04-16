@@ -8,6 +8,7 @@ NUM_BATCHES="${NUM_BATCHES:-40}"
 NUM_PARTITIONS="${NUM_PARTITIONS:-16000}"
 NUM_BOOTSTRAP_TRIALS="${NUM_BOOTSTRAP_TRIALS:-100}"
 SHOULD_CACHE_TABLES="${SHOULD_CACHE_TABLES:-true}"
+IOLAP_CACHE_ENABLED="${IOLAP_CACHE_ENABLED:-true}"
 EXPR_NAME="${EXPR_NAME:-timing}"
 
 bin/spark-submit\
@@ -22,6 +23,7 @@ bin/spark-submit\
   --conf spark.approx.numPartitions="$NUM_PARTITIONS"\
   --conf spark.approx.numBootstrapTrials="$NUM_BOOTSTRAP_TRIALS"\
   --conf spark.approx.shouldCacheTables="$SHOULD_CACHE_TABLES"\
+  --conf spark.approx.iolapCacheEnabled="$IOLAP_CACHE_ENABLED"\
   --conf spark.eventLog.enabled="true"\
   --conf spark.eventLog.dir="$LOG_DIR"\
   examples/target/scala-2.10/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar > "$LOG_DIR/$EXPR_NAME".log 2>&1

@@ -10,11 +10,12 @@ NUM_BOOTSTRAP_TRIALS="${NUM_BOOTSTRAP_TRIALS:-100}"
 SHOULD_CACHE_TABLES="${SHOULD_CACHE_TABLES:-true}"
 IOLAP_CACHE_ENABLED="${IOLAP_CACHE_ENABLED:-true}"
 EXPR_NAME="${EXPR_NAME:-timing}"
+RUNTIME_MEMORY="${RUNTIME_MEMORY:-45g}"
 
 bin/spark-submit\
   --master local[*]\
-  --driver-memory 45g\
-  --executor-memory 45g\
+  --driver-memory "$RUNTIME_MEMORY"\
+  --executor-memory "$RUNTIME_MEMORY"\
   --class org.apache.spark.examples.sql.hive.TestIolapPR\
   --conf spark.app.name="$EXPR_NAME"\
   --conf spark.approx.logDir="$LOG_DIR"\

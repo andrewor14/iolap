@@ -72,7 +72,8 @@ case class OTShuffledHashJoin(
         buildRdd.zipPartitionsWithIndex(streamedPlan.execute()) { (index, buildIter, streamIter) =>
           val hashed = HashedRelation(buildIter, numBuildRows, buildSideKeyGenerator)
           SparkEnv.get.blockManager.putSingle(
-            OLABlockId(opId.id, currentBatch, index), hashed, StorageLevel.MEMORY_AND_DISK)
+            OLABlockId(opId.id, currentBatch, index), hashed,
+            IolapUtils.checkStorageLevel(StorageLevel.MEMORY_AND_DISK))
           hashJoin(streamIter, numStreamedRows, hashed, numOutputRows)
         }
       case Some(_) =>

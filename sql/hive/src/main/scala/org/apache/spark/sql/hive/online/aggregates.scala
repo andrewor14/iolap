@@ -328,7 +328,8 @@ case class AggregateWith2Inputs2Outputs(
           logError(s"Integrity Error in (Op $opId, Batch $currentBatch) caused by $joinedRow")
         }
         val lazyBlockId = LazyBlockId(opId.id, cursor, index)
-        SparkEnv.get.blockManager.getSingle(lazyBlockId, StorageLevel.MEMORY_ONLY) match {
+        SparkEnv.get.blockManager.getSingle(
+          lazyBlockId, IolapUtils.checkStorageLevel(StorageLevel.MEMORY_ONLY)) match {
           case Some(row) => row.asInstanceOf[Row]
           case None => defaultRow
         }
@@ -380,7 +381,8 @@ case class AggregateWith2Inputs2Outputs(
           logError(s"Integrity Error in (Op $opId, Batch $currentBatch) caused by $joinedRow")
         }
         val lazyBlockId = LazyBlockId(opId.id, cursor, index)
-        SparkEnv.get.blockManager.getSingle(lazyBlockId, StorageLevel.MEMORY_ONLY) match {
+        SparkEnv.get.blockManager.getSingle(
+          lazyBlockId, IolapUtils.checkStorageLevel(StorageLevel.MEMORY_ONLY)) match {
           case Some(table) => table.asInstanceOf[JHashMap[Row, Row]]
           case None => new JHashMap[Row, Row]()
         }
@@ -435,7 +437,8 @@ case class AggregateWith2Inputs2Outputs(
 
         val prevRow = prevBatch.flatMap { bId =>
           val lazyBlockId = LazyBlockId(opId.id, bId, index)
-          SparkEnv.get.blockManager.getSingle(lazyBlockId, StorageLevel.MEMORY_ONLY)
+          SparkEnv.get.blockManager.getSingle(
+            lazyBlockId, IolapUtils.checkStorageLevel(StorageLevel.MEMORY_ONLY))
         }.map(_.asInstanceOf[Row]).orNull
 
         val aggregateResults = new GenericMutableRow(computedAggregates.length)
@@ -455,7 +458,8 @@ case class AggregateWith2Inputs2Outputs(
           val broadcastProjection = buildRelayProjection()
           val toBroadcast = broadcastProjection(result)
           SparkEnv.get.blockManager.putSingle(
-            LazyBlockId(opId.id, currentBatch, index), toBroadcast, StorageLevel.MEMORY_AND_DISK)
+            LazyBlockId(opId.id, currentBatch, index), toBroadcast,
+            IolapUtils.checkStorageLevel(StorageLevel.MEMORY_AND_DISK))
         }
 
         // Pass on the new results
@@ -504,7 +508,8 @@ case class AggregateWith2Inputs2Outputs(
 
         val previous = prevBatch.flatMap { bId =>
           val lazyBlockId = LazyBlockId(opId.id, bId, index)
-          SparkEnv.get.blockManager.getSingle(lazyBlockId, StorageLevel.MEMORY_ONLY)
+          SparkEnv.get.blockManager.getSingle(
+            lazyBlockId, IolapUtils.checkStorageLevel(StorageLevel.MEMORY_ONLY))
         }.map(_.asInstanceOf[JHashMap[Row, Row]]).getOrElse(new JHashMap[Row, Row]())
 
         val aggregateResults = new GenericMutableRow(computedAggregates.length)
@@ -537,7 +542,8 @@ case class AggregateWith2Inputs2Outputs(
         }
 
         SparkEnv.get.blockManager.putSingle(
-          LazyBlockId(opId.id, currentBatch, index), toBroadcast, StorageLevel.MEMORY_AND_DISK)
+          LazyBlockId(opId.id, currentBatch, index), toBroadcast,
+          IolapUtils.checkStorageLevel(StorageLevel.MEMORY_AND_DISK))
 
         // Pass on the new results
         results.iterator

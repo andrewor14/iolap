@@ -26,6 +26,22 @@ import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
+object IolapUtils {
+
+  /**
+   * Check if the application disabled caching in iolap,
+   * in which case return DISK_ONLY instead of the specified one.
+   */
+  def checkStorageLevel(level: StorageLevel): StorageLevel = {
+    if (SparkContext.getOrCreate().getConf.getBoolean("spark.approx.iolapCacheEnabled", true)) {
+      level
+    } else {
+      StorageLevel.DISK_ONLY
+    }
+  }
+
+}
+
 class CachedIterator(val iterator: Iterator[Row]) extends Iterator[Row] {
   protected[this] val cache = new ArrayBuffer[Row]()
 
@@ -38,9 +54,8 @@ class CachedIterator(val iterator: Iterator[Row]) extends Iterator[Row] {
   }
 
   def cache(blockId: BlockId): Unit = {
-    if (SparkContext.getOrCreate().getConf.getBoolean("spark.approx.iolapCacheEnabled", true)) {
-      SparkEnv.get.blockManager.putArray(blockId, cache.toArray, StorageLevel.MEMORY_AND_DISK)
-    }
+    SparkEnv.get.blockManager.putArray(blockId, cache.toArray,
+      IolapUtils.checkStorageLevel(StorageLevel.MEMORY_AND_DISK))
   }
 }
 

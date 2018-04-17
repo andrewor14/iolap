@@ -61,7 +61,8 @@ case class UpdatesHashMap(opId: OpId, numPartitions: Int, batchId: Int) {
       val lazyBlockId = LazyBlockId(opId.id, batchId, index)
       numActiveMaps += 1
       maps(index) =
-        blockManager.getSingle(lazyBlockId, StorageLevel.MEMORY_ONLY) match {
+        blockManager.getSingle(
+          lazyBlockId, IolapUtils.checkStorageLevel(StorageLevel.MEMORY_ONLY)) match {
           case Some(data) => data.asInstanceOf[JHashMap[Row, Row]]
           case None => throw new Exception(s"Could not find $lazyBlockId")
         }
@@ -69,7 +70,8 @@ case class UpdatesHashMap(opId: OpId, numPartitions: Int, batchId: Int) {
         (0 until numPartitions).foreach { idx =>
           if (maps(idx) == null) future {
             val lazyBlockId = LazyBlockId(opId.id, batchId, idx)
-            blockManager.getSingle(lazyBlockId, StorageLevel.MEMORY_ONLY)
+            blockManager.getSingle(
+              lazyBlockId, IolapUtils.checkStorageLevel(StorageLevel.MEMORY_ONLY))
           }
         }
       }
@@ -93,7 +95,8 @@ trait Refresher {
             val opId = dependency._1
             val blockManager = SparkEnv.get.blockManager
             val lazyBlockId = LazyBlockId(opId.id, currentBatch, 0)
-            val row = blockManager.getSingle(lazyBlockId, StorageLevel.MEMORY_ONLY) match {
+            val row = blockManager.getSingle(
+              lazyBlockId, IolapUtils.checkStorageLevel(StorageLevel.MEMORY_ONLY)) match {
               case Some(data) => data.asInstanceOf[Row]
               case None => throw new Exception(s"Could not find $lazyBlockId")
             }

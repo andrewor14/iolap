@@ -45,13 +45,13 @@ class SerializeSuite extends FunSuite {
       }
 
       @throws(classOf[IOException]) // TODO: why touch lazy val?
-      private def writeObject(oos: ObjectOutputStream): Unit = Utils.tryOrIOException {
+      private def writeObject(oos: ObjectOutputStream): Unit = IolapUtils.tryOrIOException {
         println(s"!!! Java writeObject !!!")
         oos.defaultWriteObject()
       }
 
       @throws(classOf[IOException])
-      private def readObject(ois: ObjectInputStream): Unit = Utils.tryOrIOException {
+      private def readObject(ois: ObjectInputStream): Unit = IolapUtils.tryOrIOException {
         ois.defaultReadObject()
         println(s"!!! Java readObject !!!")
       }
@@ -96,7 +96,7 @@ class SerializeSuite extends FunSuite {
     class A(val a: Int) extends Serializable
     class B(val b: Int)
     case class C(c: Int) {
-      private def writeObject(oos: ObjectOutputStream): Unit = Utils.tryOrIOException {
+      private def writeObject(oos: ObjectOutputStream): Unit = IolapUtils.tryOrIOException {
         println(s"!!! Java writeObject !!!")
         oos.defaultWriteObject()
       }
@@ -129,7 +129,7 @@ class SerializeSuite extends FunSuite {
     class A(val a: Int) extends Serializable
     class B(val b: Int)
     case class C(c: Int) extends KryoSerializable {
-      override def write(kryo: Kryo, output: Output): Unit = Utils.tryOrIOException {
+      override def write(kryo: Kryo, output: Output): Unit = IolapUtils.tryOrIOException {
         println(s"!!! Kryo writeObject !!!")
         kryo.writeClassAndObject(output, this)
       }

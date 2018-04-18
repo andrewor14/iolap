@@ -25,10 +25,10 @@ import org.apache.spark.sql.hive.online.OnlineSQLConf._
 import org.apache.spark.sql.hive.online.OnlineSQLFunctions._
 
 object TestIolapPR extends Logging {
-  def makeThread(index: Int, sqlContext: HiveContext): Thread = {
+  def makeThread(index: Int, sqlContext: HiveContext, tblIndex: Int): Thread = {
     new Thread {
       private val name = s"t$index"
-      private val tableName = s"table$index"
+      private val tableName = s"table$tblIndex"
       private val sc = sqlContext.sparkContext
       private val avgColumn = sc.getConf.get("spark.approx.avgColumn", "uniform")
       private val logDir = sc.getConf.get("spark.approx.logDir",
@@ -86,10 +86,12 @@ object TestIolapPR extends Logging {
     val inputFiles = sc.getConf.get("spark.approx.inputFiles",
       "/disk/local/disk2/stafman/students30g_2.json").split(",")
     val numPools = sc.getConf.get("spark.approx.numPools", "1").toInt
+    /*
     if (numPools > inputFiles.length) {
       throw new IllegalArgumentException(
         s"Not enough input files to process (got ${inputFiles.length}, wanted $numPools")
     }
+    */
     val numBatches = sc.getConf.get("spark.approx.numBatches", "40")
     val numPartitions = sc.getConf.get("spark.approx.numPartitions", "16000").toInt
     val numBootstrapTrials = sc.getConf.get("spark.approx.numBootstrapTrials", "300")
@@ -112,7 +114,7 @@ object TestIolapPR extends Logging {
       }
     }
 
-    val threads = (0 until numPools).map { i => makeThread(i, sqlContext) }
+    val threads = (0 until numPools).map { i => makeThread(i, sqlContext, i % inputFiles.length) }
     threads.foreach { t =>
       t.start()
       Thread.sleep(waitPeriod)

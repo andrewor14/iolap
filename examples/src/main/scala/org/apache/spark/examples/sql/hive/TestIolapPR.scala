@@ -86,12 +86,6 @@ object TestIolapPR extends Logging {
     val inputFiles = sc.getConf.get("spark.approx.inputFiles",
       "/disk/local/disk2/stafman/students30g_2.json").split(",")
     val numPools = sc.getConf.get("spark.approx.numPools", "1").toInt
-    /*
-    if (numPools > inputFiles.length) {
-      throw new IllegalArgumentException(
-        s"Not enough input files to process (got ${inputFiles.length}, wanted $numPools")
-    }
-    */
     val numBatches = sc.getConf.get("spark.approx.numBatches", "40")
     val numPartitions = sc.getConf.get("spark.approx.numPartitions", "16000").toInt
     val numBootstrapTrials = sc.getConf.get("spark.approx.numBootstrapTrials", "300")

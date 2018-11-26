@@ -17,10 +17,11 @@
 
 package org.apache.spark.sql.execution.joins
 
-import java.io.{ObjectInput, ObjectOutput, Externalizable}
+import java.io.{Externalizable, ObjectInput, ObjectOutput}
+import java.nio.ByteBuffer
 import java.util.{HashMap => JavaHashMap}
 
-import org.apache.spark.Logging
+import org.apache.spark.{Logging, SparkEnv}
 import org.apache.spark.sql.catalyst.expressions.{Projection, Row}
 import org.apache.spark.sql.execution.SparkSqlSerializer
 import org.apache.spark.sql.metric.LongSQLMetric
@@ -80,6 +81,7 @@ private[joins] final class GeneralHashedRelation(
  */
 private[joins] final class UniqueKeyHashedRelation(private var hashTable: JavaHashMap[Row, Row])
   extends HashedRelation with Externalizable with Logging {
+  private lazy val serializer = SparkEnv.get.serializer.newInstance()
 
   def this() = this(null) // Needed for serialization
 
@@ -94,11 +96,13 @@ private[joins] final class UniqueKeyHashedRelation(private var hashTable: JavaHa
   }
 
   override def writeExternal(out: ObjectOutput): Unit = {
-    writeBytes(out, SparkSqlSerializer.serialize(hashTable))
+    // writeBytes(out, SparkSqlSerializer.serialize(hashTable))
+    writeBytes(out, serializer.serialize(hashTable).array())
   }
 
   override def readExternal(in: ObjectInput): Unit = {
-    hashTable = SparkSqlSerializer.deserialize(readBytes(in))
+    // hashTable = SparkSqlSerializer.deserialize(readBytes(in))
+    hashTable = serializer.deserialize(ByteBuffer.wrap(readBytes(in)))
   }
 }
 

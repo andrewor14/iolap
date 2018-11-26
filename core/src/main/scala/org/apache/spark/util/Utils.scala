@@ -1229,7 +1229,7 @@ private[spark] object Utils extends Logging {
    *
    * @param skipClass Function that is used to exclude non-user-code classes.
    */
-  def getCallSite(skipClass: String => Boolean = sparkInternalExclusionFunction): CallSite = {
+  def getCallSite(skipClass: String => Boolean = _ => false): CallSite = {
     // Keep crawling up the stack trace until we find the first function not inside of the spark
     // package. We track the last (shallowest) contiguous Spark method. This might be an RDD
     // transformation, a SparkContext function (such as parallelize), or anything else that leads

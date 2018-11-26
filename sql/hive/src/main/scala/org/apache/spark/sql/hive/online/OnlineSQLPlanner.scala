@@ -114,22 +114,27 @@ case class IdentifyStreamedRelations(streamed: Set[String], controller: OnlineDa
   private[this] val map = new mutable.HashMap[String, RelationReference]()
 
   override def apply(plan: SparkPlan): SparkPlan = {
-    plan.transformUp {
+      logInfo(s"LOGAN: streamed: ${streamed.toArray.mkString(",")} ${plan.getClass.getCanonicalName()}")
+      plan.transformUp {
       case scan@PhysicalRDD(_, rdd) if streamed.contains(rdd.name) =>
+        logInfo(s"LOGAN: A")
         val reference = getOrNewRef(rdd.name, rdd.partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan@HiveTableScan(_, r, _) if streamed.contains(r.tableName) =>
+        logInfo(s"LOGAN: B")
         require(!r.hiveQlTable.isPartitioned, PARTITION_ERROR)
         val reference = getOrNewRef(r.tableName, scan.execute().partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan@InMemoryColumnarTableScan(_, _, r@InMemoryRelation(_, _, _, _, _, Some(tableName)))
         if streamed.contains(tableName) =>
+        logInfo(s"LOGAN: C")
         val reference = getOrNewRef(tableName, r.cachedColumnBuffers.partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan: LeafNode =>
+        logInfo(s"LOGAN: D")
         OTStreamedRelation(scan)(controller)
     }
   }

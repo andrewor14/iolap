@@ -44,7 +44,7 @@ trait CompressionCodec {
   def compressedInputStream(s: InputStream): InputStream
 }
 
-private[spark] object CompressionCodec {
+object CompressionCodec {
 
   private val configKey = "spark.io.compression.codec"
   private val shortCompressionCodecNames = Map(

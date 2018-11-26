@@ -129,6 +129,7 @@ case class Aggregate(
   }
 
   protected override def doExecute(): RDD[Row] = attachTree(this, "execute") {
+    logInfo(s"LOGAN: broadcastedTree: ${schema.treeString}")
     val numInputRows = longMetric("numInputRows")
     val numOutputRows = longMetric("numOutputRows")
     if (groupingExpressions.isEmpty) {

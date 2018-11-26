@@ -599,6 +599,7 @@ private[spark] class TaskSetManager(
    */
   def canFetchMoreResults(size: Long): Boolean = sched.synchronized {
     totalResultSize += size
+    // println(s"LOGAN: serialized size: $size,$totalResultSize")
     calculatedTasks += 1
     if (maxResultSize > 0 && totalResultSize > maxResultSize) {
       val msg = s"Total size of serialized results of ${calculatedTasks} tasks " +

@@ -598,6 +598,10 @@ case class ExtractTableName(sqlContext: SQLContext) extends Rule[LogicalPlan] {
 
       case subquery@Subquery(tableName, LogicalRDD(_, rdd)) =>
         rdd.setName(tableName)
+        logInfo(s"LOGAN: ExtractTableName rddName: ${rdd.name}\n" +
+          s"className = ${rdd.getClass.getCanonicalName()}\n" +
+          s"parents = ${rdd.dependencies.map(_.rdd.getClass.getCanonicalName).mkString(", ")}\n" +
+          s"myCreationSite = ${rdd.myCreationSite}")
         subquery
     }
   }

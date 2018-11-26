@@ -1,8 +1,8 @@
 #!/bin/bash
 
 LOG_DIR="${LOG_DIR:-/disk/local/disk2/stafman/logs}"
-INPUT_DATA="${INPUT_DATA:-/disk/local/disk2/stafman/students56g.json}"
-OUTPUT_DATA="${OUTPUT_DATA:-/disk/local/disk2/stafman/students56g_16k.parquet}"
+INPUT_DATA="${INPUT_DATA:-/disk/local/disk2/stafman/students112g.json}"
+OUTPUT_DATA="${OUTPUT_DATA:-/disk/local/disk2/stafman/students112g_16k.parquet}"
 EXPR_NAME="${EXPR_NAME:-json2parquet}"
 RUNTIME_MEMORY="${RUNTIME_MEMORY:-45g}"
 

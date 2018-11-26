@@ -538,7 +538,7 @@ case class ApproxColumn(
     finalBatch: Boolean = false)
   extends Expression {
 
-  private var numRowsEvaled = 0
+  var numRowsEvaled = 0
 
   override type EvaluatedType = Any
 
@@ -593,7 +593,7 @@ case class ApproxColumn(
     debugString += s"  columns[0] resolved: ${columns.head.resolved}\n"
     debugString += s"  columns[0] prettyString: ${columns.head.prettyString}\n"
     debugString += s"  columns[0] simpleString: ${columns.head.simpleString}\n"
-    (0 until 4).foreach { i =>
+    (0 until 2).foreach { i =>
       debugString += s"  columns[$i] treeString: ${columns(i).treeString.stripSuffix("\n")}\n"
     }
     debugString += "====================================================\n"

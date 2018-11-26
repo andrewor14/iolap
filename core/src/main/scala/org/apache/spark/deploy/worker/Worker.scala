@@ -343,6 +343,7 @@ private[worker] class Worker(
 
           // Create the executor's working directory
           val executorDir = new File(workDir, appId + "/" + execId)
+          logInfo(s"LOGANwtf: workDir: $workDir")
           if (!executorDir.mkdirs()) {
             throw new IOException("Failed to create directory " + executorDir)
           }

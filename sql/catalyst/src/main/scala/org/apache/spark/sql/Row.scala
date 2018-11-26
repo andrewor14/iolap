@@ -48,6 +48,7 @@ object Row {
 
   def fromTuple(tuple: Product): Row = fromSeq(tuple.productIterator.toSeq)
 
+  override def toString(): String = s""
   /**
    * Merge multiple rows into a single row, one after another.
    */

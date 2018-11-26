@@ -78,6 +78,8 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
               }
               val deserializedResult = serializer.get().deserialize[DirectTaskResult[_]](
                 serializedTaskResult.get)
+              val x = deserializedResult.value()
+              // println(s"LOGAN deserialized: ${x.asInstanceOf[Array[Any]](0)}")
               sparkEnv.blockManager.master.removeBlock(blockId)
               (deserializedResult, size)
           }

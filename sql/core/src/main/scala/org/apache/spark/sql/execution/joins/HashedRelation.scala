@@ -20,9 +20,11 @@ package org.apache.spark.sql.execution.joins
 import java.io.{ObjectInput, ObjectOutput, Externalizable}
 import java.util.{HashMap => JavaHashMap}
 
+import org.apache.spark.Logging
 import org.apache.spark.sql.catalyst.expressions.{Projection, Row}
 import org.apache.spark.sql.execution.SparkSqlSerializer
 import org.apache.spark.sql.metric.LongSQLMetric
+import org.apache.spark.util.SizeEstimator
 import org.apache.spark.util.collection.CompactBuffer
 
 
@@ -77,7 +79,7 @@ private[joins] final class GeneralHashedRelation(
  * assumes the key is unique.
  */
 private[joins] final class UniqueKeyHashedRelation(private var hashTable: JavaHashMap[Row, Row])
-  extends HashedRelation with Externalizable {
+  extends HashedRelation with Externalizable with Logging {
 
   def this() = this(null) // Needed for serialization
 
@@ -86,7 +88,10 @@ private[joins] final class UniqueKeyHashedRelation(private var hashTable: JavaHa
     if (v eq null) null else CompactBuffer(v)
   }
 
-  def getValue(key: Row): Row = hashTable.get(key)
+  def getValue(key: Row): Row = {
+    val v = hashTable.get(key)
+    v
+  }
 
   override def writeExternal(out: ObjectOutput): Unit = {
     writeBytes(out, SparkSqlSerializer.serialize(hashTable))
@@ -101,7 +106,7 @@ private[joins] final class UniqueKeyHashedRelation(private var hashTable: JavaHa
 // TODO(rxin): a version of [[HashedRelation]] backed by arrays for consecutive integer keys.
 
 
-private[sql] object HashedRelation {
+private[sql] object HashedRelation extends Logging {
 
   def apply(
       input: Iterator[Row],
@@ -118,9 +123,13 @@ private[sql] object HashedRelation {
     var keyIsUnique = true
 
     // Create a mapping of buildKeys -> rows
+    var counter = 0L
     while (input.hasNext) {
       currentRow = input.next()
       numInputRows += 1
+     
+      counter += 1
+      
       val rowKey = keyGenerator(currentRow)
       if (!rowKey.anyNull) {
         val existingMatchList = hashTable.get(rowKey)
@@ -135,7 +144,6 @@ private[sql] object HashedRelation {
         matchList += currentRow.copy()
       }
     }
-
     if (keyIsUnique) {
       val uniqHashTable = new JavaHashMap[Row, Row](hashTable.size)
       val iter = hashTable.entrySet().iterator()

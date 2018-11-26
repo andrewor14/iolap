@@ -33,7 +33,8 @@ object IolapUtils {
    * in which case return DISK_ONLY instead of the specified one.
    */
   def checkStorageLevel(level: StorageLevel): StorageLevel = {
-    if (SparkContext.getOrCreate().getConf.getBoolean("spark.approx.iolapCacheEnabled", true)) {
+    // if (SparkContext.getOrCreate().getConf.getBoolean("spark.approx.iolapCacheEnabled", true)) {
+    if(true) {
       level
     } else {
       StorageLevel.DISK_ONLY

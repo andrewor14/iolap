@@ -19,7 +19,7 @@ package org.apache.spark.sql.hive.online
 
 import java.util.{HashMap => JHashMap, HashSet => JHashSet, LinkedHashMap => JLinkedHashMap}
 
-import org.apache.spark.SparkEnv
+import org.apache.spark.{SparkEnv, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.errors._
 import org.apache.spark.sql.catalyst.expressions._
@@ -204,24 +204,25 @@ case class BootstrapAggregate(
       child.execute().mapPartitions { iter =>
         val hashTable = new JHashMap[Row, Array[DelegateAggregateFunction]]
         val groupingProjection = new InterpretedMutableProjection(groupingExpressions, child.output)
-
         var currentRow: Row = null
-        while (iter.hasNext) {
+        var j: Long = 0
+        var k: Long = 0
+        var hN = iter.hasNext
+        while (hN) {
           currentRow = iter.next()
+          hN = iter.hasNext
           val currentGroup = groupingProjection(currentRow)
           var currentBuffer = hashTable.get(currentGroup)
           if (currentBuffer == null) {
             currentBuffer = newAggregateBuffer()
             hashTable.put(currentGroup.copy(), currentBuffer)
           }
-
           var i = 0
           while (i < currentBuffer.length) {
             currentBuffer(i).update(currentRow)
             i += 1
           }
         }
-
         new Iterator[Row] {
           private[this] val hashTableIterator = hashTable.entrySet().iterator()
           private[this] val aggregateResults = new GenericMutableRow(computedAggregates.length)
@@ -233,6 +234,7 @@ case class BootstrapAggregate(
           override final def hasNext: Boolean = hashTableIterator.hasNext
 
           override final def next(): Row = {
+            // val t = System.currentTimeMillis()
             val currentEntry = hashTableIterator.next()
             val currentGroup = currentEntry.getKey
             val currentBuffer = currentEntry.getValue

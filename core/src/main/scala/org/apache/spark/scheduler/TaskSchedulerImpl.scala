@@ -51,7 +51,7 @@ import org.apache.spark.storage.BlockManagerId
  * acquire a lock on us, so we need to make sure that we don't try to lock the backend while
  * we are holding a lock on ourselves.
  */
-private[spark] class TaskSchedulerImpl(
+class TaskSchedulerImpl(
     val sc: SparkContext,
     val maxTaskFailures: Int,
     isLocal: Boolean = false)
@@ -114,7 +114,7 @@ private[spark] class TaskSchedulerImpl(
   }
 
   // This is a var so that we can reset it for testing purposes.
-  private[spark] var taskResultGetter = new TaskResultGetter(sc.env, this)
+  var taskResultGetter = new TaskResultGetter(sc.env, this)
 
   override def setDAGScheduler(dagScheduler: DAGScheduler) {
     this.dagScheduler = dagScheduler

@@ -1,0 +1,75 @@
+18/04/02 15:42:30.960 INFO SparkContext: Running Spark version 1.4.2
+18/04/02 15:42:31.166 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+18/04/02 15:42:31.244 WARN Utils: Your hostname, sns60 resolves to a loopback address: 127.0.1.1; using 128.112.7.130 instead (on interface eth0)
+18/04/02 15:42:31.244 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+18/04/02 15:42:31.262 INFO SecurityManager: Changing view acls to: stafman
+18/04/02 15:42:31.263 INFO SecurityManager: Changing modify acls to: stafman
+18/04/02 15:42:31.264 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: Set(stafman); users with modify permissions: Set(stafman)
+18/04/02 15:42:32.095 INFO Slf4jLogger: Slf4jLogger started
+18/04/02 15:42:32.148 INFO Remoting: Starting remoting
+18/04/02 15:42:32.321 INFO Remoting: Remoting started; listening on addresses :[akka.tcp://sparkDriver@128.112.7.130:41443]
+18/04/02 15:42:32.328 INFO Utils: Successfully started service 'sparkDriver' on port 41443.
+18/04/02 15:42:32.347 INFO SparkEnv: Registering MapOutputTracker
+18/04/02 15:42:32.366 INFO SparkEnv: Registering BlockManagerMaster
+18/04/02 15:42:32.395 INFO DiskBlockManager: Created local directory at /tmp/spark-fdc64271-24ef-41d0-810e-fa09ae6c201e/blockmgr-560d84d5-4d13-49d0-afae-2f76322cb6aa
+18/04/02 15:42:32.402 INFO MemoryStore: MemoryStore started with capacity 25.9 GB
+18/04/02 15:42:32.444 INFO HttpFileServer: HTTP File server directory is /tmp/spark-fdc64271-24ef-41d0-810e-fa09ae6c201e/httpd-f2303bee-77cc-4369-b6aa-714ee7dd3501
+18/04/02 15:42:32.447 INFO HttpServer: Starting HTTP Server
+18/04/02 15:42:32.499 INFO Server: jetty-8.y.z-SNAPSHOT
+18/04/02 15:42:32.520 INFO AbstractConnector: Started SocketConnector@0.0.0.0:49782
+18/04/02 15:42:32.520 INFO Utils: Successfully started service 'HTTP file server' on port 49782.
+18/04/02 15:42:32.538 INFO SparkEnv: Registering OutputCommitCoordinator
+18/04/02 15:42:32.651 INFO Server: jetty-8.y.z-SNAPSHOT
+18/04/02 15:42:32.677 INFO AbstractConnector: Started SelectChannelConnector@0.0.0.0:4040
+18/04/02 15:42:32.681 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+18/04/02 15:42:32.683 INFO SparkUI: Started SparkUI at http://128.112.7.130:4040
+18/04/02 15:42:33.084 INFO SparkContext: Added JAR file:/disk/local/disk1/stafman/iolap-princeton/iolap/examples/target/scala-2.10/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar at http://128.112.7.130:49782/jars/spark-examples-1.4.3-SNAPSHOT-hadoop2.2.0.jar with timestamp 1522698153083
+18/04/02 15:42:33.121 INFO LocalSparkCluster: Starting a local Spark cluster with 1 workers.
+18/04/02 15:42:33.123 INFO SecurityManager: Changing view acls to: stafman
+18/04/02 15:42:33.123 INFO SecurityManager: Changing modify acls to: stafman
+18/04/02 15:42:33.124 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: Set(stafman); users with modify permissions: Set(stafman)
+18/04/02 15:42:33.148 INFO Slf4jLogger: Slf4jLogger started
+18/04/02 15:42:33.155 INFO Remoting: Starting remoting
+18/04/02 15:42:33.170 INFO Remoting: Remoting started; listening on addresses :[akka.tcp://sparkMaster@128.112.7.130:55513]
+18/04/02 15:42:33.171 INFO Utils: Successfully started service 'sparkMaster' on port 55513.
+18/04/02 15:42:33.208 INFO Master: Starting Spark master at spark://128.112.7.130:55513
+18/04/02 15:42:33.208 INFO Master: Running Spark version 1.4.2
+18/04/02 15:42:33.211 INFO Server: jetty-8.y.z-SNAPSHOT
+18/04/02 15:42:33.231 INFO AbstractConnector: Started SelectChannelConnector@0.0.0.0:37709
+18/04/02 15:42:33.235 INFO Utils: Successfully started service 'MasterUI' on port 37709.
+18/04/02 15:42:33.235 INFO MasterWebUI: Started MasterWebUI at http://128.112.7.130:37709
+18/04/02 15:42:33.401 INFO SecurityManager: Changing view acls to: stafman
+18/04/02 15:42:33.401 INFO SecurityManager: Changing modify acls to: stafman
+18/04/02 15:42:33.401 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: Set(stafman); users with modify permissions: Set(stafman)
+18/04/02 15:42:33.401 INFO Master: I have been elected leader! New state: ALIVE
+18/04/02 15:42:33.414 INFO Slf4jLogger: Slf4jLogger started
+18/04/02 15:42:33.419 INFO Remoting: Starting remoting
+18/04/02 15:42:33.432 INFO Remoting: Remoting started; listening on addresses :[akka.tcp://sparkWorker1@128.112.7.130:40965]
+18/04/02 15:42:33.433 INFO Utils: Successfully started service 'sparkWorker1' on port 40965.
+18/04/02 15:42:33.446 INFO FairSchedulableBuilder: Created default pool default, schedulingMode: FIFO, minShare: 0, weight: 1
+18/04/02 15:42:33.477 INFO AppClient$ClientActor: Connecting to master akka.tcp://sparkMaster@128.112.7.130:55513/user/Master...
+18/04/02 15:42:33.480 INFO Worker: Starting Spark worker 128.112.7.130:40965 with 32 cores, 50.0 GB RAM
+18/04/02 15:42:33.481 INFO Worker: Running Spark version 1.4.2
+18/04/02 15:42:33.481 INFO Worker: Spark home: /disk/local/disk1/stafman/iolap-princeton/iolap
+18/04/02 15:42:33.490 INFO Server: jetty-8.y.z-SNAPSHOT
+18/04/02 15:42:33.513 INFO AbstractConnector: Started SelectChannelConnector@0.0.0.0:40049
+18/04/02 15:42:33.513 INFO Utils: Successfully started service 'WorkerUI' on port 40049.
+18/04/02 15:42:33.513 INFO WorkerWebUI: Started WorkerWebUI at http://128.112.7.130:40049
+18/04/02 15:42:33.514 INFO Worker: Connecting to master akka.tcp://sparkMaster@128.112.7.130:55513/user/Master...
+18/04/02 15:42:33.644 INFO Master: Registering worker 128.112.7.130:40965 with 32 cores, 50.0 GB RAM
+18/04/02 15:42:33.651 INFO Master: Registering app org.apache.spark.examples.sql.hive.TestIolapPR
+18/04/02 15:42:33.653 INFO Worker: Successfully registered with master spark://128.112.7.130:55513
+18/04/02 15:42:33.664 INFO Master: Registered app org.apache.spark.examples.sql.hive.TestIolapPR with ID app-20180402154233-0000
+18/04/02 15:42:33.669 INFO SparkDeploySchedulerBackend: Connected to Spark cluster with app ID app-20180402154233-0000
+18/04/02 15:42:33.680 INFO Master: Launching executor app-20180402154233-0000/0 on worker worker-20180402154233-128.112.7.130-40965
+18/04/02 15:42:33.684 INFO AppClient$ClientActor: Executor added: app-20180402154233-0000/0 on worker-20180402154233-128.112.7.130-40965 (128.112.7.130:40965) with 32 cores
+18/04/02 15:42:33.685 INFO SparkDeploySchedulerBackend: Granted executor ID app-20180402154233-0000/0 on hostPort 128.112.7.130:40965 with 32 cores, 50.0 GB RAM
+18/04/02 15:42:33.688 INFO Worker: Asked to launch executor app-20180402154233-0000/0 for org.apache.spark.examples.sql.hive.TestIolapPR
+18/04/02 15:42:33.811 INFO DiskBlockManager: Shutdown hook called
+18/04/02 15:42:33.812 INFO ShutdownHookManager: path = /tmp/spark-fdc64271-24ef-41d0-810e-fa09ae6c201e/blockmgr-560d84d5-4d13-49d0-afae-2f76322cb6aa, already present as root for deletion.
+18/04/02 15:42:33.813 INFO ShutdownHookManager: Shutdown hook called
+18/04/02 15:42:33.814 INFO ShutdownHookManager: Deleting directory /tmp/spark-fdc64271-24ef-41d0-810e-fa09ae6c201e/userFiles-d642df56-7ff8-49ea-a900-af6c8911b051
+18/04/02 15:42:33.816 INFO ShutdownHookManager: Deleting directory /tmp/spark-fdc64271-24ef-41d0-810e-fa09ae6c201e
+18/04/02 15:42:33.821 INFO ExecutorRunner: Launch command: "/usr/lib/jvm/java-8-oracle/bin/java" "-cp" "/disk/local/disk1/stafman/iolap-princeton/iolap/conf/:/disk/local/disk1/stafman/iolap-princeton/iolap/assembly/target/scala-2.10/spark-assembly-1.4.3-SNAPSHOT-hadoop2.2.0.jar:/disk/local/disk1/stafman/iolap-princeton/iolap/lib_managed/jars/datanucleus-core-3.2.10.jar:/disk/local/disk1/stafman/iolap-princeton/iolap/lib_managed/jars/datanucleus-api-jdo-3.2.6.jar:/disk/local/disk1/stafman/iolap-princeton/iolap/lib_managed/jars/datanucleus-rdbms-3.2.9.jar" "-Xms51200M" "-Xmx51200M" "-Dspark.driver.port=41443" "org.apache.spark.executor.CoarseGrainedExecutorBackend" "--driver-url" "akka.tcp://sparkDriver@128.112.7.130:41443/user/CoarseGrainedScheduler" "--executor-id" "0" "--hostname" "128.112.7.130" "--cores" "32" "--app-id" "app-20180402154233-0000" "--worker-url" "akka.tcp://sparkWorker1@128.112.7.130:40965/user/Worker"
+18/04/02 15:42:33.825 INFO AppClient$ClientActor: Executor updated: app-20180402154233-0000/0 is now RUNNING
+18/04/02 15:42:33.871 INFO ShutdownHookManager: Deleting directory /tmp/spark-fdc64271-24ef-41d0-810e-fa09ae6c201e/httpd-f2303bee-77cc-4369-b6aa-714ee7dd3501

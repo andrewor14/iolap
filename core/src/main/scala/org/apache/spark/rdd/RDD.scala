@@ -1478,6 +1478,7 @@ abstract class RDD[T: ClassTag](
 
   /** User code that created this RDD (e.g. `textFile`, `parallelize`). */
   @transient private[spark] val creationSite = sc.getCallSite()
+  val myCreationSite = Utils.getCallSite(_ => false)
 
   /**
    * The scope associated with the operation that created this RDD.

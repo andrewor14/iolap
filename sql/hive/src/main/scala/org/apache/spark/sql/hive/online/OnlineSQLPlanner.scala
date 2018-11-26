@@ -114,22 +114,28 @@ case class IdentifyStreamedRelations(streamed: Set[String], controller: OnlineDa
   private[this] val map = new mutable.HashMap[String, RelationReference]()
 
   override def apply(plan: SparkPlan): SparkPlan = {
-    plan.transformUp {
+      logInfo(s"LOGAN: streamed: ${streamed.toArray.mkString(",")}" +
+        s" ${plan.getClass.getCanonicalName()}")
+      plan.transformUp {
       case scan@PhysicalRDD(_, rdd) if streamed.contains(rdd.name) =>
+        logInfo(s"LOGAN: A")
         val reference = getOrNewRef(rdd.name, rdd.partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan@HiveTableScan(_, r, _) if streamed.contains(r.tableName) =>
+        logInfo(s"LOGAN: B")
         require(!r.hiveQlTable.isPartitioned, PARTITION_ERROR)
         val reference = getOrNewRef(r.tableName, scan.execute().partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan@InMemoryColumnarTableScan(_, _, r@InMemoryRelation(_, _, _, _, _, Some(tableName)))
         if streamed.contains(tableName) =>
+        logInfo(s"LOGAN: C")
         val reference = getOrNewRef(tableName, r.cachedColumnBuffers.partitions.length)
         StreamedRelation(withSeed(scan, reference))(reference, controller)
 
       case scan: LeafNode =>
+        logInfo(s"LOGAN: D")
         OTStreamedRelation(scan)(controller)
     }
   }
@@ -1307,7 +1313,7 @@ object OnlinePlannerUtil {
       .groupBy { case a@TaggedAttribute(b: Bound, _, _, _, _) => b.child }
 
   def explode(expr: Expression, map: Map[ExprId, Seq[Attribute]]): Seq[Expression] = expr match {
-    case a: Attribute => if (map.contains(a.exprId)) map(a.exprId) else Seq(a)
+    case a: Attribute => ifnivetn (map.contains(a.exprId)) map(a.exprId) else Seq(a)
     case e => cartesian(e.children.map(c => explode(c, map))).map(e.withNewChildren)
   }
 

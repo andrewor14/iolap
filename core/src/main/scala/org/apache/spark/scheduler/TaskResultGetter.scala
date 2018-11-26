@@ -22,11 +22,12 @@ import java.util.concurrent.RejectedExecutionException
 
 import scala.language.existentials
 import scala.util.control.NonFatal
-
 import org.apache.spark._
 import org.apache.spark.TaskState.TaskState
 import org.apache.spark.serializer.SerializerInstance
 import org.apache.spark.util.{ThreadUtils, Utils}
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Runs a thread pool that deserializes and remotely fetches (if necessary) task results.
@@ -34,6 +35,8 @@ import org.apache.spark.util.{ThreadUtils, Utils}
 private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedulerImpl)
   extends Logging {
 
+
+  val results = new ArrayBuffer[Any]
   private val THREADS = sparkEnv.conf.getInt("spark.resultGetter.threads", 4)
   private val getTaskResultExecutor = ThreadUtils.newDaemonFixedThreadPool(
     THREADS, "task-result-getter")
@@ -58,6 +61,7 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
               // We should call it here, so that when it's called again in
               // "TaskSetManager.handleSuccessfulTask", it does not need to deserialize the value.
               directResult.value()
+              println(s"LOGAN: resultValue: ${directResult.value()}")
               (directResult, serializedData.limit())
             case IndirectTaskResult(blockId, size) =>
               if (!taskSetManager.canFetchMoreResults(size)) {
@@ -78,6 +82,8 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
               }
               val deserializedResult = serializer.get().deserialize[DirectTaskResult[_]](
                 serializedTaskResult.get)
+              deserializedResult.value()
+              results += deserializedResult.value()
               sparkEnv.blockManager.master.removeBlock(blockId)
               (deserializedResult, size)
           }

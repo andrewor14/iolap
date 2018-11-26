@@ -59,6 +59,8 @@ case class MTBroadcastHashJoin(
   extends BinaryNode with HashJoin with Stateful
   with IteratorRefresher with HashedRelationRefresher {
 
+  logInfo(s"LOGAN: MTBroadcastHashJoin ${schemaString}")
+
   override def outputPartitioning: Partitioning = streamedPlan.outputPartitioning
 
   override def requiredChildDistribution =
@@ -133,7 +135,7 @@ case class MTBroadcastHashJoin(
   }
 
   @transient
-  private lazy val broadcastFuture = future {
+  private lazy val broadcastFuture = {
     // Note that we use .execute().collect() because we don't want to convert data to Scala types
     val input: Array[Row] = buildPlan.execute().map(_.copy()).collect()
     val predicate = buildCacheFilter match {
@@ -155,14 +157,15 @@ case class MTBroadcastHashJoin(
         }
         controller.broadcasts((opId, bId)).asInstanceOf[Broadcast[HashedRelation2]]
     }
-  }(BroadcastHashJoin.broadcastHashJoinExecutionContext)
+  }
+  // }(BroadcastHashJoin.broadcastHashJoinExecutionContext)
 
   override def doExecute() = {
-    val broadcastRelation = Await.result(broadcastFuture, timeout)
+    // val broadcastRelation = Await.result(broadcastFuture, timeout)
     streamedPlan.execute().mapPartitions { streamedIter =>
       new Iterator[Row] {
         private[this] val iterator =
-          hashJoin2(streamedIter, refreshHashedRelation()(broadcastRelation.value))
+          hashJoin2(streamedIter, refreshHashedRelation()(broadcastFuture.value))
 
         override def hasNext: Boolean = iterator.hasNext
 
@@ -179,7 +182,7 @@ case class MTBroadcastHashJoin(
     val join = MTBroadcastHashJoin(
       leftCacheFilter, rightCacheFilter, streamRefresh, buildRefresh,
       leftKeys, rightKeys, buildSide, left, right)(controller, newTrace, opId)
-    join.broadcastFuture
+    // join.broadcastFuture
     join
   }
 }

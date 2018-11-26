@@ -66,9 +66,11 @@ trait HashJoin {
 
       private[this] val joinKeys = streamSideKeyGenerator()
 
-      override final def hasNext: Boolean =
+      override final def hasNext: Boolean = {
         (currentMatchPosition != -1 && currentMatchPosition < currentHashMatches.size) ||
           (streamIter.hasNext && fetchNext())
+      }
+
 
       override final def next(): Row = {
         val ret = buildSide match {

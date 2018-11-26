@@ -17,12 +17,17 @@
 
 package org.apache.spark.sql.execution.joins
 
-import java.io.{ObjectInput, ObjectOutput, Externalizable}
+import java.io._
+import java.nio.ByteBuffer
 import java.util.{HashMap => JavaHashMap}
 
+import org.apache.spark.{Logging, SparkConf, SparkEnv}
+import org.apache.spark.io.CompressionCodec
 import org.apache.spark.sql.catalyst.expressions.{Projection, Row}
 import org.apache.spark.sql.execution.SparkSqlSerializer
 import org.apache.spark.sql.metric.LongSQLMetric
+import org.apache.spark.sql.types.UTF8String
+import org.apache.spark.util.SizeEstimator
 import org.apache.spark.util.collection.CompactBuffer
 
 
@@ -55,14 +60,29 @@ private[sql] sealed trait HashedRelation {
  * A general [[HashedRelation]] backed by a hash map that maps the key into a sequence of values.
  */
 private[joins] final class GeneralHashedRelation(
-    private var hashTable: JavaHashMap[Row, CompactBuffer[Row]])
+    private var hashTable: JavaHashMap[ByteBuffer, CompactBuffer[Array[Row]]])
   extends HashedRelation with Externalizable {
 
   def this() = this(null) // Needed for serialization
 
-  override def get(key: Row): CompactBuffer[Row] = hashTable.get(key)
+  override def get(key: Row): CompactBuffer[Row] = {
+//    val newKey = key.getInt(0)
+//    val bb = ByteBuffer.allocate(4)
+//    bb.putInt(newKey)
+//    bb.flip()
+//    val v = hashTable.get(bb)(0)
+//    val buf = ByteBuffer.wrap(v)
+//    val id = buf.getInt()
+//    val strBuf = new Array[Byte](buf.remaining())
+//    buf.get(strBuf)
+//    val priority = new String(strBuf, "utf-8")
+//    val row = Row.fromSeq(Seq(priority, id))
+//    CompactBuffer(row)
+    hashTable.get(key)
+  }
 
   override def writeExternal(out: ObjectOutput): Unit = {
+
     writeBytes(out, SparkSqlSerializer.serialize(hashTable))
   }
 
@@ -76,20 +96,55 @@ private[joins] final class GeneralHashedRelation(
  * A specialized [[HashedRelation]] that maps key into a single value. This implementation
  * assumes the key is unique.
  */
-private[joins] final class UniqueKeyHashedRelation(private var hashTable: JavaHashMap[Row, Row])
-  extends HashedRelation with Externalizable {
+private[joins] final class UniqueKeyHashedRelation(private var hashTable: JavaHashMap[ByteBuffer,
+  Array[Row]])
+  extends HashedRelation with Externalizable with Logging {
+  private lazy val serializer = SparkEnv.get.serializer.newInstance()
 
   def this() = this(null) // Needed for serialization
 
   override def get(key: Row): CompactBuffer[Row] = {
+    val newKey = key.getInt(0)
+//    val bb = ByteBuffer.allocate(4)
+//    bb.putInt(newKey)
+//    bb.flip()
     val v = hashTable.get(key)
-    if (v eq null) null else CompactBuffer(v)
+//    if(v eq null) {
+//      null
+//    } else {
+//      val bb = ByteBuffer.wrap(v)
+//      val id = bb.getInt()
+//      val strBuf = new Array[Byte](bb.remaining())
+//      bb.get(strBuf)
+//      // val priority = new String(strBuf, "utf-8")
+//      val priority = new UTF8String()
+//      priority.set(strBuf)
+//      val row = Row.fromSeq(Seq(priority, id))
+//      CompactBuffer(row)
+//    }
+     if (v eq null) null else CompactBuffer(v)
   }
 
-  def getValue(key: Row): Row = hashTable.get(key)
+  def getValue(key: Row): Row = {
+    val newKey = key.getInt(0)
+    val bb = ByteBuffer.allocate(4)
+    bb.putInt(newKey)
+    bb.flip()
+    val v = hashTable.get(bb)
+    val buf = ByteBuffer.wrap(v)
+    val id = buf.getInt()
+    val strBuf = new Array[Byte](buf.remaining())
+    buf.get(strBuf)
+    // val priority = new String(strBuf, "utf-8")
+    val priority = new UTF8String()
+    priority.set(strBuf)
+    val row = Row.fromSeq(Seq(priority, id))
+    row
+  }
 
   override def writeExternal(out: ObjectOutput): Unit = {
-    writeBytes(out, SparkSqlSerializer.serialize(hashTable))
+    // writeBytes(out, SparkSqlSerializer.serialize(hashTable))
+    writeBytes(out, serializer.serialize(hashTable))
   }
 
   override def readExternal(in: ObjectInput): Unit = {
@@ -101,7 +156,7 @@ private[joins] final class UniqueKeyHashedRelation(private var hashTable: JavaHa
 // TODO(rxin): a version of [[HashedRelation]] backed by arrays for consecutive integer keys.
 
 
-private[sql] object HashedRelation {
+private[sql] object HashedRelation extends Logging {
 
   def apply(
       input: Iterator[Row],
@@ -110,34 +165,57 @@ private[sql] object HashedRelation {
       sizeEstimate: Int = 64): HashedRelation = {
 
     // TODO: Use Spark's HashMap implementation.
-    val hashTable = new JavaHashMap[Row, CompactBuffer[Row]](sizeEstimate)
+    // val hashTable = new JavaHashMap[Row, CompactBuffer[Row]](sizeEstimate)
+    val hashTable = new JavaHashMap[ByteBuffer, CompactBuffer[Array[Row]]](sizeEstimate)
     var currentRow: Row = null
 
     // Whether the join key is unique. If the key is unique, we can convert the underlying
     // hash map into one specialized for this.
     var keyIsUnique = true
-
+    var counter = 0L
     // Create a mapping of buildKeys -> rows
     while (input.hasNext) {
+      if (counter % 100000 == 0) {
+        logInfo(s"LOGANhr: In while loop: $counter")
+        val mb = 1024 * 1024
+        val runtime = Runtime.getRuntime
+        logInfo(s"LOGANhr: free: ${runtime.freeMemory() / mb}, " +
+          s"total: ${runtime.totalMemory() / mb}, " +
+          s"sizeOfHashTable: ${SizeEstimator.estimate(hashTable) / mb}, " +
+          s"sizeOfHashTable: ${hashTable.size()}")
+      }
       currentRow = input.next()
       numInputRows += 1
+      counter += 1
       val rowKey = keyGenerator(currentRow)
+
       if (!rowKey.anyNull) {
+        // val rowKeyVal = rowKey.getInt(0)
+        // val buf = ByteBuffer.allocate(4)
+        // buf.putInt(rowKeyVal)
+        // buf.flip()
         val existingMatchList = hashTable.get(rowKey)
         val matchList = if (existingMatchList == null) {
-          val newMatchList = new CompactBuffer[Row]()
+          val newMatchList = new CompactBuffer[Array[Byte]]()
+
           hashTable.put(rowKey, newMatchList)
           newMatchList
         } else {
           keyIsUnique = false
           existingMatchList
         }
+//        val id = currentRow.getInt(1)
+//        val priority = currentRow.getString(0)
+//        val bb = ByteBuffer.allocate(4)
+//        bb.putInt(id)
+//        val arr = bb.array() ++ priority.getBytes("utf-8")
         matchList += currentRow.copy()
+        // matchList += arr
       }
     }
 
     if (keyIsUnique) {
-      val uniqHashTable = new JavaHashMap[Row, Row](hashTable.size)
+      val uniqHashTable = new JavaHashMap[ByteBuffer, Array[Byte]](hashTable.size)
       val iter = hashTable.entrySet().iterator()
       while (iter.hasNext) {
         val entry = iter.next()

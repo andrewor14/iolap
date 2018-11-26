@@ -96,6 +96,7 @@ private[sql] abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         if sqlContext.conf.sortMergeJoinEnabled =>
         val mergeJoin =
           joins.SortMergeJoin(leftKeys, rightKeys, planLater(left), planLater(right))
+          joins.SortMergeJoin(leftKeys, rightKeys, planLater(left), planLater(right))
         condition.map(Filter(_, mergeJoin)).getOrElse(mergeJoin) :: Nil
 
       case ExtractEquiJoinKeys(Inner, leftKeys, rightKeys, condition, left, right) =>

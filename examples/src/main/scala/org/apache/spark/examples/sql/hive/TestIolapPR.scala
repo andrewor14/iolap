@@ -532,7 +532,7 @@ object TestIolapPR extends Logging {
 
 
   def resultToProgress(name: String, result: Array[Row], approxCols: Seq[Int]): Double = {
-    var retVal = Double.PositiveInfinity
+    var retVal = 1.0
     val N: Int = 3 // smoothing factor
 
 
@@ -607,6 +607,7 @@ object TestIolapPR extends Logging {
         throw new UnsupportedOperationException("Don't know what to do here yet")
       }
     }
+    if (retVal == Double.NaN) retVal = 1.0
     retVal
   }
 

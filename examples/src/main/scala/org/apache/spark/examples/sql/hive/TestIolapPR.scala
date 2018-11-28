@@ -80,7 +80,8 @@ object TestIolapPR extends Logging {
 //          val progress = resultToProgress(name, col, Seq(2, 3, 4, 5, 6, 7, 8, 9))
           val progress = resultToProgress(name, col, Seq(2))
           logInfo(s"LOGAN: DEBUG $name $progress")
-          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
+          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean &&
+            progress != Double.NaN && progress != Double.PositiveInfinity) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
         }
@@ -170,7 +171,8 @@ object TestIolapPR extends Logging {
           logInfo(s"LOGAN: collectNext time ${System.currentTimeMillis() - t1}")
           val progress = resultToProgress(name, col, Seq(0))
           logInfo(s"LOGAN: DEBUG $name $progress")
-          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
+          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean &&
+            progress != Double.NaN && progress != Double.PositiveInfinity) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
         }
@@ -275,7 +277,8 @@ object TestIolapPR extends Logging {
           logInfo(s"LOGAN: collectNext time $name ${System.currentTimeMillis() - t1}")
           val progress = resultToProgress(name, col, Seq(0))
           logInfo(s"LOGAN: DEBUG $name $progress")
-          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
+          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean &&
+            progress != Double.NaN && progress != Double.PositiveInfinity) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
         }
@@ -329,7 +332,8 @@ object TestIolapPR extends Logging {
           logInfo(s"LOGAN: collectNext time ${System.currentTimeMillis() - t1}")
           val progress = resultToProgress(name, col, Seq(3))
           logInfo(s"LOGAN: DEBUG $name $progress")
-          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
+          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean &&
+            progress != Double.NaN && progress != Double.PositiveInfinity) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
         }
@@ -382,7 +386,8 @@ object TestIolapPR extends Logging {
           logInfo(s"LOGAN: collectNext time $name ${System.currentTimeMillis() - t1}")
           val progress = resultToProgress(name, col, Seq(0))
           logInfo(s"LOGAN: DEBUG $name $progress")
-          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
+          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean &&
+            progress != Double.NaN && progress != Double.PositiveInfinity) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
         }
@@ -447,7 +452,8 @@ object TestIolapPR extends Logging {
           logInfo(s"LOGAN: collectNext time ${System.currentTimeMillis() - t1}")
           val progress = resultToProgress(name, col, Seq(0))
           logInfo(s"LOGAN: DEBUG $name $progress")
-          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
+          if (sc.getConf.get("spark.approx.enabled", "false").toBoolean &&
+            progress != Double.NaN && progress != Double.PositiveInfinity) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
         }

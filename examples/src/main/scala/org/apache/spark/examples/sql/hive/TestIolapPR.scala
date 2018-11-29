@@ -607,7 +607,7 @@ object TestIolapPR extends Logging {
         throw new UnsupportedOperationException("Don't know what to do here yet")
       }
     }
-    if (retVal == Double.NaN) retVal = 1.0
+    if (retVal.isNaN) retVal = 1.0
     retVal
   }
 

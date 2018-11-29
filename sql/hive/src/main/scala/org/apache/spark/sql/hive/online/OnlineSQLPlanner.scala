@@ -1151,7 +1151,7 @@ case class ImplementJoin(controller: OnlineDataFrame) extends Rule[SparkPlan] {
         case (GrowthMode(Fixed, Fixed), _) =>
           require(!containsLazyEvaluates(build.output),
             s"!!! Warning: incorrect growth mode in ${join.simpleString}")
-          OTBroadcastHashJoin(leftKeys, rightKeys, buildSide, left, right)(
+          OTShuffledHashJoin(leftKeys, rightKeys, buildSide, left, right)(
             controller)
         case (GrowthMode(AlmostFixed, Fixed), _) =>
           MTBroadcastHashJoin(
@@ -1163,7 +1163,7 @@ case class ImplementJoin(controller: OnlineDataFrame) extends Rule[SparkPlan] {
         case (_, GrowthMode(Fixed, Fixed)) =>
           require(!containsLazyEvaluates(stream.output),
             s"!!! Warning: incorrect growth mode in ${join.simpleString}")
-          OTBroadcastHashJoin(leftKeys, rightKeys, swap(buildSide), left, right)(
+          OTShuffledHashJoin(leftKeys, rightKeys, swap(buildSide), left, right)(
             controller)
         case (_, GrowthMode(AlmostFixed, Fixed)) =>
           MTBroadcastHashJoin(

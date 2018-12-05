@@ -590,8 +590,11 @@ object TestIolapPR extends Logging {
       resultHistory.getOrElse(name, ArrayBuffer[Array[Row]]())
     poolResultHistory.append(result)
     val errorsHistory = poolResultHistory.map { r =>
-      val approxResults = result.map( x => x.toSeq(approxCol)(0))
-      val diffs = approxResults.zip(groundTruth).map { case (x: Double, y: Double) =>
+      val estimations = result.map { row =>
+        val estimation = row.toSeq(approxCol).asInstanceOf[GenericRowWithSchema]
+        estimation(0).toString.toDouble
+      }
+      val diffs = estimations.zip(groundTruth).map { case (x: Double, y: Double) =>
           Math.abs(x - y)
       }
       diffs

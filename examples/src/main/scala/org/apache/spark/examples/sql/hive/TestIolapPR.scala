@@ -35,7 +35,7 @@ object TestIolapPR extends Logging {
   // works for 1, 100, 300, 1000
   def makeThreadTPCHQ1(index: Int, sqlContext: HiveContext): Thread = {
     new Thread {
-
+      /*
       val groundTruth = Array(
         Seq("A", "F", 37757113842L,
           5.6616527268757055E13,
@@ -69,6 +69,8 @@ object TestIolapPR extends Logging {
           38237.295578143654,
           0.04999960114820497,
           1480675200))
+          */
+      val groundTruth = Seq(37757113842.0, 985802167.0, 59138286906.0, 37757365731.0)
 
 
       override def run(): Unit = {
@@ -103,8 +105,6 @@ object TestIolapPR extends Logging {
         odf.hasNext
         sc.setLocalProperty("spark.scheduler.pool", name)
         sc.addSchedulablePool(name, 0, 1000000)
-        var prevLoss = 0.0
-        var initialDLoss = 0.0
         (1 to odf.progress._2).foreach { i =>
           val t1 = System.currentTimeMillis()
           val col = odf.collectNext()
@@ -114,6 +114,9 @@ object TestIolapPR extends Logging {
 //          val progress = resultToProgress(name, col, Seq(2, 3, 4, 5, 6, 7, 8, 9))
           val progress = resultToProgress(name, col, Seq(2))
           logInfo(s"LOGAN: DEBUG $name $progress")
+          val distToTruth =
+            resultToGroundTruthDist(name, col, 2, groundTruth)
+          logInfo(s"LOGAN: DEBUG2 $name $distToTruth")
           if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
@@ -176,7 +179,7 @@ object TestIolapPR extends Logging {
   // works for 1, 100, 300, 1000
   def makeThreadTPCHQ6(index: Int, sqlContext: HiveContext): Thread = {
 
-    val groundTruth = Array(Seq(7.535403260988173E10))
+    val groundTruth = Seq(7.535403260988173E10)
 
     new Thread {
       override def run(): Unit = {
@@ -207,6 +210,9 @@ object TestIolapPR extends Logging {
           logInfo(s"LOGAN: collectNext time ${System.currentTimeMillis() - t1}")
           val progress = resultToProgress(name, col, Seq(0))
           logInfo(s"LOGAN: DEBUG $name $progress")
+          val distToTruth =
+            resultToGroundTruthDist(name, col, 0, groundTruth)
+          logInfo(s"LOGAN: DEBUG2 $name $distToTruth")
           if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
@@ -329,7 +335,9 @@ object TestIolapPR extends Logging {
         val name = s"${index}Q16"
         val logDir = sc.getConf.get("spark.approx.logDir",
           "/disk/local/disk1/stafman/iolap-princeton/dashboard/")
-
+        import scala.io.Source
+        val groundTruth = Source.fromFile("/u/haoyuz/q16groundtruth.data")
+          .getLines.toSeq.map { x => x.toDouble }
 
         val innerTbl = sqlContext
           .sql("SELECT s_suppkey FROM supplier WHERE s_comment like '%Customer%Complaints%'")
@@ -366,6 +374,9 @@ object TestIolapPR extends Logging {
           logInfo(s"LOGAN: collectNext time ${System.currentTimeMillis() - t1}")
           val progress = resultToProgress(name, col, Seq(3))
           logInfo(s"LOGAN: DEBUG $name $progress")
+          val distToTruth =
+            resultToGroundTruthDist(name, col, 3, groundTruth)
+          logInfo(s"LOGAN: DEBUG2 $name $distToTruth")
           if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
@@ -430,6 +441,9 @@ object TestIolapPR extends Logging {
   // works on s1, s100, s1000
   def makeThreadTPCHQ19(index: Int, sqlContext: HiveContext): Thread = {
     new Thread {
+
+      val groundTruth = Seq(3.9746783091858068E9)
+
       override def run(): Unit = {
         val sc = sqlContext.sparkContext
         val name = s"${index}Q19"
@@ -484,6 +498,9 @@ object TestIolapPR extends Logging {
           logInfo(s"LOGAN: collectNext time ${System.currentTimeMillis() - t1}")
           val progress = resultToProgress(name, col, Seq(0))
           logInfo(s"LOGAN: DEBUG $name $progress")
+          val distToTruth =
+            resultToGroundTruthDist(name, col, 0, groundTruth)
+          logInfo(s"LOGAN: DEBUG2 $name $distToTruth")
           if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
@@ -561,10 +578,29 @@ object TestIolapPR extends Logging {
   // NS stands for normalized and smoothed
   // val lossDiffHistoryNS: mutable.HashMap[String, ArrayBuffer[Double]] = mutable.HashMap()
 
-  def resultToGroundTruthDist(name: String, result: Array[Row],
-                              groundTruth: Array[Seq[Any]]): Double = {
-    
-    return 0
+  val resultHistory: mutable.HashMap[String, ArrayBuffer[Array[Row]]] = mutable.HashMap()
+
+  // assume only one approxCol for now....
+  def resultToGroundTruthDist(name: String, result: Array[Row], approxCol: Int,
+                              groundTruth: Seq[Double]): Double = {
+    if (!resultHistory.contains(name)) {
+      resultHistory.put(name, ArrayBuffer[Array[Row]]())
+    }
+    val poolResultHistory: ArrayBuffer[Array[Row]] =
+      resultHistory.getOrElse(name, ArrayBuffer[Array[Row]]())
+    poolResultHistory.append(result)
+    val errorsHistory = poolResultHistory.map { r =>
+      val approxResults = result.map( x => x.toSeq(approxCol))
+      val diffs = approxResults.zip(groundTruth).map { case (x: Double, y: Double) =>
+          Math.abs(x - y)
+      }
+      diffs
+    }
+    // for each
+    val relativeErrors = errorsHistory.last.zip(errorsHistory.head).map { case(x: Double, y: Double) =>
+        x / y
+    }
+    relativeErrors.sum / relativeErrors.length
   }
 
   def resultToProgress(name: String, result: Array[Row], approxCols: Seq[Int]): Double = {

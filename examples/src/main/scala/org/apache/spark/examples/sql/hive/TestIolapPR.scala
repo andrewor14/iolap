@@ -336,7 +336,7 @@ object TestIolapPR extends Logging {
         val logDir = sc.getConf.get("spark.approx.logDir",
           "/disk/local/disk1/stafman/iolap-princeton/dashboard/")
         import scala.io.Source
-        val groundTruth = Source.fromFile("/u/haoyuz/q16groundtruth.data")
+        val groundTruth = Source.fromFile("/home/haoyuz/q16groundtruth.data")
           .getLines.toSeq.map { x => x.toDouble }
 
         val innerTbl = sqlContext

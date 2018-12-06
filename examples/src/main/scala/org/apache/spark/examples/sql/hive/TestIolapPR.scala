@@ -594,8 +594,6 @@ object TestIolapPR extends Logging {
         val estimation = row.toSeq(approxCol).asInstanceOf[GenericRowWithSchema]
         estimation(0).toString.toDouble
       }
-      estimations.foreach { x => logInfo(s"LOGAN: A: $x")}
-      groundTruth.foreach { x => logInfo(s"LOGAN: B: $x")}
       val diffs = estimations.zip(groundTruth).map { case (x: Double, y: Double) =>
           Math.abs(x - y)
       }
@@ -606,9 +604,8 @@ object TestIolapPR extends Logging {
     val relativeErrors = errorsHistory.last.zip(errorsHistory.head).map { case(x: Double, y: Double) =>
         x / y
     }
-    relativeErrors.foreach { x => logInfo(s"LOGAN: D: $x")}
-    throw new UnsupportedOperationException("Blah")
-    relativeErrors.sum / relativeErrors.length
+    logInfo(s"LOGAN testing ABC ${relativeErrors.sum} ${relativeErrors.size} ${relativeErrors.length}")
+    relativeErrors.sum / relativeErrors.size
   }
 
   def resultToProgress(name: String, result: Array[Row], approxCols: Seq[Int]): Double = {

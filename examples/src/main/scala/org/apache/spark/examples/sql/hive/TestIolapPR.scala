@@ -599,12 +599,14 @@ object TestIolapPR extends Logging {
       val diffs = estimations.zip(groundTruth).map { case (x: Double, y: Double) =>
           Math.abs(x - y)
       }
+      diffs.foreach { x => logInfo(s"LOGAN: C: $x")}
       diffs
     }
     // for each
     val relativeErrors = errorsHistory.last.zip(errorsHistory.head).map { case(x: Double, y: Double) =>
         x / y
     }
+    relativeErrors.foreach { x => logInfo(s"LOGAN: D: $x")}
     throw new UnsupportedOperationException("Blah")
     relativeErrors.sum / relativeErrors.length
   }

@@ -604,7 +604,15 @@ object TestIolapPR extends Logging {
         if (y == 0) 0
         else x / y
     }
-    relativeErrors.sum / relativeErrors.size
+    // relativeErrors.sum / relativeErrors.size
+    val sortedRelErrors = relativeErrors.sortWith(_ < _)
+    if ( sortedRelErrors.size % 2 == 1) {
+        sortedRelErrors(sortedRelErrors.size / 2)
+    } else {
+        val (up, down) = sortedRelErrors.splitAt(sortedRelErrors.size /
+                2)
+        (up.last + down.head) / 2
+    }
   }
 
   def resultToProgress(name: String, result: Array[Row], approxCols: Seq[Int]): Double = {

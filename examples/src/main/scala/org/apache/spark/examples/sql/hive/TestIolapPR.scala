@@ -601,12 +601,9 @@ object TestIolapPR extends Logging {
     }
     // for each
     val relativeErrors = errorsHistory.last.zip(errorsHistory.head).map { case(x: Double, y: Double) =>
-      logInfo(s"LOGAN testing DEF $x $y")
-        x / y
+        if (y == 0) 0
+        else x / y
     }
-    logInfo(s"LOGAN testing ABC ${relativeErrors.sum}" +
-      s" ${relativeErrors.size} ${relativeErrors.length}")
-    throw new UnsupportedOperationException("blah")
     relativeErrors.sum / relativeErrors.size
   }
 

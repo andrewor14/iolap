@@ -364,6 +364,10 @@ object TestIolapPR extends Logging {
               p_brand,
               p_type,
               p_size
+          order by
+              p_brand,
+              p_type,
+              p_size
           """).online
         odf.hasNext
         sc.setLocalProperty("spark.scheduler.pool", name)

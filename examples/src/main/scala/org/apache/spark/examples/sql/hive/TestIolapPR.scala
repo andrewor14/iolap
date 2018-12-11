@@ -643,7 +643,10 @@ object TestIolapPR extends Logging {
             Math.abs(poolLossHist(i)(0) - poolLossHist(i - 1)(0))
           }
           val max = poolLossDiffHist.max
-          val poolLossDiffNormalized = poolLossDiffHist.map( x => x / max)
+          val poolLossDiffNormalized = poolLossDiffHist.map{ x =>
+            if (max == 0) 0.0
+            else x / max
+          }
 
           val lastN = poolLossDiffNormalized.slice(poolLossDiffNormalized.size -
             Math.min(N, poolLossDiffNormalized.size), poolLossDiffNormalized.size)
@@ -672,7 +675,8 @@ object TestIolapPR extends Logging {
           // poolLossDiffNormalized is the normalized diff for each group
           val poolLossDiffNormalized = poolLossDiffHist.map { hist =>
             hist.zip(maxs).map { case(x: Double, max: Double) =>
-              x / max
+              if (max == 0) 0.0
+              else x / max
             }
           }
           // lastN is the last N historical points, each of which has the normalized diff

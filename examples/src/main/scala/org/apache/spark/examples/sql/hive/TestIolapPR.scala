@@ -330,20 +330,22 @@ object TestIolapPR extends Logging {
   // works on s1, s100, s1000 (make sure partsupp is a streamed relation!)
   def makeThreadTPCHQ16(index: Int, sqlContext: HiveContext): Thread = {
     new Thread {
+
+      import scala.io.Source
+      val groundTruth = Source.fromFile("/home/haoyuz/q16groundtruth.data")
+        .getLines.toSeq.map { x => x.toDouble }
+
+      val innerTbl = sqlContext
+        .sql("SELECT s_suppkey FROM supplier WHERE s_comment like '%Customer%Complaints%'")
+        .collect()
+      val innerTblStr = innerTbl.map(x => x(0)).mkString("(", ", ", ")")
+
       override def run(): Unit = {
         val sc = sqlContext.sparkContext
         val name = s"${index}Q16"
         val logDir = sc.getConf.get("spark.approx.logDir",
           "/disk/local/disk1/stafman/iolap-princeton/dashboard/")
-        import scala.io.Source
-        val groundTruth = Source.fromFile("/home/haoyuz/q16groundtruth.data")
-          .getLines.toSeq.map { x => x.toDouble }
-
-        val innerTbl = sqlContext
-          .sql("SELECT s_suppkey FROM supplier WHERE s_comment like '%Customer%Complaints%'")
-          .collect()
-        val innerTblStr = innerTbl.map(x => x(0)).mkString("(", ", ", ")")
-
+        
         val odf = sqlContext.sql(
           s"""
           select

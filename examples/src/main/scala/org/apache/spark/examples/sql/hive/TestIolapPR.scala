@@ -17,6 +17,7 @@
 
 package org.apache.spark.examples.sql.hive
 
+import org.apache.spark.PoolReweighterLoss.{pool2numCores, sc}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.hive.HiveContext
@@ -117,6 +118,7 @@ object TestIolapPR extends Logging {
           val distToTruth =
             resultToGroundTruthDist(name, col, 2, groundTruth)
           logInfo(s"LOGAN: DEBUG2 $name $distToTruth")
+          logInfo(s"LOGAN: DEBUG3 $name ${getAvgCIWidth(name, col, Seq(2))}")
           if (sc.getConf.get("spark.approx.enabled", "false").toBoolean) {
             sc.setPoolWeight(name, (1000000 * progress).toInt)
           }
@@ -345,7 +347,7 @@ object TestIolapPR extends Logging {
         val name = s"${index}Q16"
         val logDir = sc.getConf.get("spark.approx.logDir",
           "/disk/local/disk1/stafman/iolap-princeton/dashboard/")
-        
+
         val odf = sqlContext.sql(
           s"""
           select
@@ -618,6 +620,45 @@ object TestIolapPR extends Logging {
         val (up, down) = sortedRelErrors.splitAt(sortedRelErrors.size /
                 2)
         (up.last + down.head) / 2
+    }
+  }
+
+
+  def predictProgress(name: String): Double = {
+    0.0
+  }
+
+  def allocate(name: String, time: Long): Unit = {
+    var numCoresToAllocate = 16 * 8
+    // setup
+    val pools = resultHistory.keySet
+    val pool2NumCores: mutable.HashMap[String, Int] = mutable.HashMap()
+    def diff(t: (String, Double)) = t._2
+    val heap = new mutable.PriorityQueue[(String, Double)]()(Ordering.by(diff))
+    val totalCores = SparkContext.getOrCreate.defaultParallelism
+    // val fairshare = totalCores / pool2numCores.size
+    pools.foreach { pool => pool2NumCores.put(pool, 0) }
+    while (numCoresToAllocate > 0) {
+      numCoresToAllocate -= 1
+    }
+  }
+
+  def getAvgCIWidth(name: String, result: Array[Row], approxCols: Seq[Int]): Double = {
+    val approxCol = approxCols(0)
+
+    // if we have only one group
+    if (result.length == 1) {
+      val estAndBounds = result(0).toSeq(approxCols(0)).asInstanceOf[GenericRowWithSchema]
+      // val estimation = estAndBounds(0).toString.toDouble
+      val lowerBound = estAndBounds(1).toString.toDouble
+      val upperBound = estAndBounds(2).toString.toDouble
+      upperBound - lowerBound
+    } else {
+      val diffs = result.map { row =>
+        val estimation = row.toSeq(approxCols(0)).asInstanceOf[GenericRowWithSchema]
+        estimation(2).toString.toDouble - estimation(1).toString.toDouble
+      }
+      diffs.sum / diffs.length
     }
   }
 
